@@ -1,0 +1,71 @@
+To run the game:
+
+1) Import 'AICompo-desktop' and 'AICompo-core' into your preferred java IDE
+2) Run com.aicompo.game.desktop.DesktopLauncher.java
+
+Adding your AI to the game:
+
+When CTRL + 1 is pressed in the waiting menu, the game will add an DemoAIPlayer.
+This class is documented and can be modified.
+It is found in com.aicompo.example alongside other example code.
+The main function to look at is 'public void run()', and 
+your AI code should go where it says 'YOUR AI CODE HERE'
+
+How to connect:
+
+Open a TCP socket and connect to the host using port 45556.
+Your player ID will be sent right after you've connected.
+
+Receiving the map:
+
+MAP_BEGIN - Indicates the start of map stream
+width;height - The height and width of the map. This is only sent once.
+x;y;collision - Position and the type of the tile (0 = empty, 1 = occupied). This is repeatedly sent until the entire map is sent.
+MAP_END - Indicates the end of map stream
+
+Receiving the game state:
+
+PLAYERS_BEGIN - Indicates the start of players stream
+id;name;x;y;degrees - The parameters of the player. x and y is the center of the player, and degrees is the direction of which the player is facing (in degrees). This is repeatedly sent until all players are processed.
+PLAYERS_END - Indicates the end of players stream
+
+BULLETS_BEGIN - Indicates the start of the bullets stream
+id;ownerid;x;y;degrees - The parameters of the bullets. x and y is the center of the bullet, and degrees is the direction of which the bullet is heading (in degrees). This is repeatedly sent until all bullets are processed.
+BULLETS_END - Indicates the end of the bullets stream
+
+When restarting:
+
+RESTART - Indicates the game is about to restart
+
+Available tank moves:
+
+NAME - Changes your name
+TURN_LEFT - Turns your tank left
+TURN_RIGHT - Turns your tank right
+STOP_TURN - Stop your tank turning
+MOVE_FORWARDS - Move your tank forwards
+MOVE_BACKWARDS - Move your tank backwards
+STOP_MOVE - Stop your tank moving
+SHOOT - Shoot (has a 1 second cooldown)
+
+Dimensions and velocities of stuff:
+
+Player collision box: 32x32
+Player movement speed: 2 pixels per frame
+Player turning speed: 3 degrees per frame
+Bullet collision box: 1x1 (a single point)
+Bullet speed: 10 pixels per frame
+Tile/block size: 40x40
+
+Player collision box:
+
+Note:
+
+All commands should end with a newline (\n)!
+To receive the game state, you have to send an empty line ("\n"). If this empty newline is not sent once every 3 seconds, you will be disconnected.
+Incidentally, this means that your AI cannot have a compute time greater than 3 seconds.
+An empty line received from the server indicates it has finished sending the game state.
+The game uses the libgdx game framework, so any questions regarding their API can be found in their documentation: http://libgdx.badlogicgames.com/nightlies/docs/api/
+
+Made by Marcus Loo Vergara for Abakus GameDev, 2015.
+Neste gang blir dokumentasjonen på norsk :P
