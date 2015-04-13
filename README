@@ -39,7 +39,7 @@ RESTART - Indicates the game is about to restart
 
 Available tank moves:
 
-NAME - Changes your name
+NAME newName - Changes your name (in this exmple to 'newName')
 TURN_LEFT - Turns your tank left
 TURN_RIGHT - Turns your tank right
 STOP_TURN - Stop your tank turning
