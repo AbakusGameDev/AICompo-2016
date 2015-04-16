@@ -336,6 +336,15 @@ public class AICompoGame extends ApplicationAdapter {
 		batch.end();
 	}
 	
+	private class SpawnPoint {
+		public SpawnPoint(int x, int y) {
+			this.x = x;
+			this.y = y;
+		}
+		
+		int x, y;
+	}
+	
 	private void startGame() {
 		// Clear stuff
 		synchronized(AICompoGame.class) {
@@ -383,13 +392,8 @@ public class AICompoGame extends ApplicationAdapter {
 		// Spawn players
 		int spriteIndex = 0;
 		for(PlayerDescriptor descriptor : playerDescriptors) {
-			int x, y;
-			do {
-				x = 1 + random.nextInt(Map.WIDTH - 2);
-				y = 1 + random.nextInt(Map.HEIGHT - 2);
-			} while(Map.isTile(x, y));
-			
-			Player player = new Player(descriptor, arial11, 1 + (spriteIndex++ % 6), bullets, x, y);
+			SpawnPoint spawn = getSpawnPoint();
+			Player player = new Player(descriptor, arial11, 1 + (spriteIndex++ % 6), bullets, spawn.x, spawn.y);
 			
 			Thread thread = new Thread(new Runnable() {
 				@Override
@@ -498,6 +502,44 @@ public class AICompoGame extends ApplicationAdapter {
 		state = State.GAME_STARTING;
 		startCountDown = 3.0f;
 		gameRunningTime = 0.0f;
+	}
+
+	private SpawnPoint getSpawnPoint() {
+		int i = 1;
+		do {
+			ArrayList<SpawnPoint> spawnPoints = new ArrayList<SpawnPoint>();
+			for(int x = i; x < Map.WIDTH - i; ++x) {
+				for(int y = i; y < Map.HEIGHT - i; ++y) {
+					if(Map.isTile(x, y)) continue;
+					if(x == i || y == i || x == Map.WIDTH - i - 1 || y == Map.HEIGHT - i - 1) {
+						spawnPoints.add(new SpawnPoint(x, y));
+					}
+				}
+			}
+			
+			while(!spawnPoints.isEmpty()) {
+				int idx = random.nextInt(spawnPoints.size());
+				SpawnPoint spawnPoint = spawnPoints.get(idx);
+				spawnPoints.remove(idx);
+				
+				boolean tooClose = false;
+				for(Player player : players) {
+					int px = (int) (player.getCenter().x / Map.TILE_SIZEF), py = (int) (player.getCenter().y / Map.TILE_SIZEF);
+					if(Math.abs(px - spawnPoint.x) <= 5 - i && Math.abs(py - spawnPoint.y) <= 5 - i) {
+						tooClose = true;
+						break;
+					}
+				}
+				
+				if(tooClose) {
+					continue;
+				}
+				
+				return spawnPoint;
+			}
+		} while(++i < Map.WIDTH);
+		
+		return null;
 	}
 
 	@Override
