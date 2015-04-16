@@ -40,7 +40,7 @@ public class AICompoGame extends ApplicationAdapter {
 	private static Sprite floorSprite;
 	private static Sprite wallSprite;
 	private static float startCountDown;
-	private static float gameRunningTime;
+	private static float remainingTime;
 	private static BitmapFont arial15;
 	private static BitmapFont arial11;
 	private static ArrayList<Player> players;
@@ -116,7 +116,7 @@ public class AICompoGame extends ApplicationAdapter {
 		arial11.setUseIntegerPositions(true);
 		generator.dispose();
 		startCountDown = 0.0f;
-		gameRunningTime = 0.0f;
+		remainingTime = 0.0f;
 		state = State.WAITING_FOR_PLAYERS;
 		pannelSprite = new Sprite(new Texture("pannel.png"));
 		pannelSprite.flip(false, true);
@@ -195,7 +195,12 @@ public class AICompoGame extends ApplicationAdapter {
 			
 		case GAME_RUNNING:
 			if(players.size() >= 2) { 
-				gameRunningTime += Gdx.graphics.getDeltaTime();
+				remainingTime -= Gdx.graphics.getDeltaTime();
+				if(remainingTime <= 0.0f) {
+					while(!players.isEmpty()) {
+						removePlayer(players.get(0));
+					}
+				}
 			}
 			break;
 			
@@ -291,7 +296,7 @@ public class AICompoGame extends ApplicationAdapter {
 			if(state != State.WAITING_FOR_PLAYERS) {
 				i++;
 				arial15.draw(batch, "Remaining Players: " + players.size(), 740, 30 + 20 * i++);
-				arial15.draw(batch, "Match Time: " + (int) gameRunningTime + " seconds", 740, 30 + 20 * i++);
+				arial15.draw(batch, "Remaining Time: " + (int) remainingTime + " seconds", 740, 30 + 20 * i++);
 			}
 		}
 		
@@ -308,7 +313,7 @@ public class AICompoGame extends ApplicationAdapter {
 		else if(state == State.GAME_STARTING) {
 			centerText = TEXT_STARTING_IN + "\n" + Integer.toString((int)Math.ceil(startCountDown));
 		}
-		else if(state == State.GAME_RUNNING && gameRunningTime <= 3.0f) {
+		else if(state == State.GAME_RUNNING && remainingTime >= 178.0f) {
 			centerText = TEXT_GAME_STARTED;
 		}
 		else if(state == State.GAME_DONE) {
@@ -501,7 +506,7 @@ public class AICompoGame extends ApplicationAdapter {
 		
 		state = State.GAME_STARTING;
 		startCountDown = 3.0f;
-		gameRunningTime = 0.0f;
+		remainingTime = 180.0f;
 	}
 
 	private SpawnPoint getSpawnPoint() {
