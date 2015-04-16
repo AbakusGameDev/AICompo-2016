@@ -14,6 +14,7 @@ import com.aicompo.example.DemoAIPlayer;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -47,6 +48,8 @@ public class AICompoGame extends ApplicationAdapter {
 	private static ArrayList<Entity> entities;
 	private static ArrayList<Bullet> bullets;
 	private static Random random;
+	private static int mapIndex;
+	private static FileHandle[] mapFiles;
 	
 	public static final int SERVER_PORT = 45556;
 	public static final String TEXT_HOTKEYS = "Press CTRL + 1 to add example AI player\nPress CTRL + 2 to add controlled player\n";
@@ -119,6 +122,8 @@ public class AICompoGame extends ApplicationAdapter {
 		pannelSprite.flip(false, true);
 		pannelSprite.setPosition(Map.WIDTH * Map.TILE_SIZE, 0.0f);
 		pannelSprite.setSize(280, 720);
+		mapIndex = 0;
+		mapFiles = Gdx.files.internal("./bin/maps").list();
 		
 		wallSprite = new Sprite(new Texture("wall.png"));
 		wallSprite.flip(false, true);
@@ -174,6 +179,7 @@ public class AICompoGame extends ApplicationAdapter {
 			else if(Gdx.input.isKeyJustPressed(Input.Keys.NUM_2) && (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) || Gdx.input.isKeyPressed(Input.Keys.CONTROL_RIGHT))) {
 				new Thread(new ControlledPlayer()).start();
 			}
+			
 			break;
 			
 		case GAME_STARTING:
@@ -206,6 +212,25 @@ public class AICompoGame extends ApplicationAdapter {
 			
 		default:
 			break;
+		}
+		
+		if(state == State.WAITING_FOR_PLAYERS || state == State.GAME_DONE) {
+			if(Gdx.input.isKeyJustPressed(Input.Keys.LEFT)) {
+				if(mapIndex == 0) {
+					mapIndex = mapFiles.length - 1;
+				}
+				else {
+					mapIndex--;
+				}
+			}
+			else if(Gdx.input.isKeyJustPressed(Input.Keys.RIGHT)) {
+				if(mapIndex == mapFiles.length - 1) {
+					mapIndex = 0;
+				}
+				else {
+					mapIndex++;
+				}
+			}
 		}
 
 		// Disconnect players that don't respond
@@ -293,7 +318,11 @@ public class AICompoGame extends ApplicationAdapter {
 			else if(players.size() == 0) {
 				centerText = TEXT_TIE;
 			}
-			centerText += "\n\n\nPress CTRL + ENTER to restart";
+			centerText += "\n\n\nPress CTRL + ENTER to restart\n";
+		}
+		
+		if(state == State.WAITING_FOR_PLAYERS || state == State.GAME_DONE) {
+			centerText += "\nCurrent map: " + mapFiles[mapIndex].nameWithoutExtension() + "\nPress LEFT/RIGHT to change map";
 		}
 		
 		// Draw center text
@@ -315,10 +344,39 @@ public class AICompoGame extends ApplicationAdapter {
 			entities.clear();
 		}
 		
-		// Randomize map
-		for(int y = 0; y < Map.HEIGHT; ++y) {
-			for(int x = 0; x < Map.WIDTH; ++x) {
-				Map.setTile(x, y, y == 0 || x == 0 || y == Map.HEIGHT - 1 || x == Map.WIDTH - 1 || random.nextFloat() < 0.1f ? 1 : 0);
+		// Load map
+		{
+			BufferedReader mapReader = new BufferedReader(mapFiles[mapIndex].reader());
+			String line = null;
+			int y = 0;
+			try {
+				while((line = mapReader.readLine()) != null) {
+					if(line.length() != Map.WIDTH) {
+						System.err.println("Line " + y + " in map file '" + mapFiles[mapIndex].name() + "' has an incorrect amount of characters");
+						break;
+					}
+					
+					for(int x = 0; x < Map.WIDTH; ++x) {
+						char c = line.charAt(x);
+						if(c == '#') {
+							Map.setTile(x, y, 1);
+						}
+						else if(c == '.') {
+							Map.setTile(x, y, 0);
+						}
+						else if(c == '?') {
+							Map.setTile(x, y, y == 0 || x == 0 || y == Map.HEIGHT - 1 || x == Map.WIDTH - 1 || random.nextFloat() < 0.1f ? 1 : 0);
+						}
+					}
+					
+					y++;
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+	
+			if(y != Map.HEIGHT) {
+				System.err.println("Map file '" + mapFiles[mapIndex].name() + "' has an incorrect amount of lines");
 			}
 		}
 
