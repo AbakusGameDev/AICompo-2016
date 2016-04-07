@@ -1,4 +1,4 @@
-package com.aicompo.example;
+package com.aicompo.ai;
 
 import com.badlogic.gdx.math.Vector2;
 

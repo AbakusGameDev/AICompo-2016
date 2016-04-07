@@ -1,4 +1,4 @@
-package com.aicompo.example;
+package com.aicompo.ai;
 
 public class Map {
 	private static int[][] tiles;
