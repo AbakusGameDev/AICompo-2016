@@ -30,8 +30,4 @@ public class Bullet {
 	public float getAngle() {
 		return angle;
 	}
-	
-	public boolean equals(Object object) {
-		return object instanceof Bullet && this.id == ((Bullet)object).id;
-	}
 }

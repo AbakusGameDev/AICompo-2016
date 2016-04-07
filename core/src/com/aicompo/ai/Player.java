@@ -33,8 +33,4 @@ public class Player {
 	public float getAngle() {
 		return angle;
 	}
-	
-	public boolean equals(Object object) {
-		return object instanceof Player && this.id == ((Player)object).id;
-	}
 }
