@@ -30,7 +30,7 @@ public class ControlledPlayer implements Runnable {
 
 					DataOutputStream out = new DataOutputStream(socket.getOutputStream());
 
-					// Player movement (WASD / cursor keys)
+					// com.aicompo.game.Player movement (WASD / cursor keys)
 					if(Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) {
 						out.writeBytes("MOVE_FORWARDS\n");
 					}

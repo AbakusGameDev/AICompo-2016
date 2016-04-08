@@ -11,7 +11,6 @@ import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.Random;
 
-import com.aicompo.main.Main;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -60,7 +59,7 @@ public class AICompoGame extends ApplicationAdapter {
 	private static FileHandle[] mapFiles;
 	private ArrayList<Point> tilesToRemove;
 
-	public static final float GAME_TIME = 2.0f; // Sec
+	public static final float GAME_TIME = 60.0f; // Sec
 	public static final int SERVER_PORT = 45556;
 	public static final String TEXT_HOTKEYS = "Press <1> to add AI player\nPress <2> to add controlled player\n";
 	public static final String TEXT_NEED_PLAYERS = "Need at least two players to start\n\n" + TEXT_HOTKEYS;
@@ -153,7 +152,7 @@ public class AICompoGame extends ApplicationAdapter {
 				}
 			}
 			else if(Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) {
-				new Thread(new Main()).start();
+				new Thread(new AIMain()).start();
 			}
 			else if(Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) {
 				new Thread(new ControlledPlayer()).start();
@@ -230,7 +229,7 @@ public class AICompoGame extends ApplicationAdapter {
 			break;
 		}
 
-		// Map switching
+		// com.aicompo.game.Map switching
 		if(state == State.WAITING_FOR_PLAYERS || state == State.GAME_DONE) {
 			if(Gdx.input.isKeyJustPressed(Input.Keys.LEFT)) {
 				if(mapIndex == 0) {
@@ -397,7 +396,7 @@ public class AICompoGame extends ApplicationAdapter {
 			}
 	
 			if(y != Map.HEIGHT) {
-				System.err.println("Map file '" + mapFiles[mapIndex].name() + "' has an incorrect amount of lines");
+				System.err.println("com.aicompo.game.Map file '" + mapFiles[mapIndex].name() + "' has an incorrect amount of lines");
 			}
 		}
 

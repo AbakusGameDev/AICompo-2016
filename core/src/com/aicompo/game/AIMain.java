@@ -1,4 +1,4 @@
-package com.aicompo.main;
+package com.aicompo.game;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -9,26 +9,27 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import com.aicompo.ai.*;
+import com.aicompo.ai.AI;
 import com.aicompo.ai.Bullet;
 import com.aicompo.ai.Map;
+import com.aicompo.ai.Player;
 import com.badlogic.gdx.math.Vector2;
 
-public class Main implements Runnable {
+public class AIMain implements Runnable {
 	private static String hostIp = "127.0.0.1";
 	private static String hostPort = "45556";
 
 	private AI ai = new AI();
 	private int playerID;
 
-	public HashMap<Integer, com.aicompo.ai.Player> playerMap;
-	public HashMap<Integer, com.aicompo.ai.Bullet> bulletMap;
+	public HashMap<Integer, Player> playerMap;
+	public HashMap<Integer, Bullet> bulletMap;
 
 	private DataOutputStream outputStream;
 
-	public Main() {
-		playerMap = new HashMap<Integer, com.aicompo.ai.Player>();
-		bulletMap = new HashMap<Integer, com.aicompo.ai.Bullet>();
+	public AIMain() {
+		playerMap = new HashMap<Integer, Player>();
+		bulletMap = new HashMap<Integer, Bullet>();
 	}
 
 	@Override
@@ -69,7 +70,7 @@ public class Main implements Runnable {
 
 								// If player doesn't exist, create it
 								if(!playerMap.containsKey(playerID)) {
-									Player player = new com.aicompo.ai.Player(Integer.parseInt(playerData[0]));
+									Player player = new Player(Integer.parseInt(playerData[0]));
 
 									// Add to map
 									playerMap.put(playerID, player);
@@ -108,7 +109,7 @@ public class Main implements Runnable {
 
 								// If player doesn't exist, create it
 								if(!bulletMap.containsKey(bulletID)) {
-									Bullet bullet = new com.aicompo.ai.Bullet(Integer.parseInt(bulletData[0]), playerMap.get(Integer.parseInt(bulletData[1])));
+									Bullet bullet = new Bullet(Integer.parseInt(bulletData[0]), playerMap.get(Integer.parseInt(bulletData[1])));
 
 									// Add to map
 									bulletMap.put(bulletID, bullet);
@@ -193,6 +194,6 @@ public class Main implements Runnable {
 			e.printStackTrace();
 		}
         
-		new Main().run();
+		new AIMain().run();
 	}
 }

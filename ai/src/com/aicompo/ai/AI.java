@@ -1,6 +1,6 @@
 package com.aicompo.ai;
 
-import com.aicompo.main.AISuperClass;
+import com.aicompo.game.AISuperClass;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 

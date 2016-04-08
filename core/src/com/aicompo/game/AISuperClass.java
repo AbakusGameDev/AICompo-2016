@@ -1,19 +1,16 @@
-package com.aicompo.main;
+package com.aicompo.game;
 
-import com.aicompo.ai.*;
 import com.aicompo.ai.Bullet;
+import com.aicompo.ai.Player;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 
 public abstract class AISuperClass {
     public Player player;
     public ArrayList<Player> otherPlayers;
-
     public ArrayList<Bullet> bullets;
-
     public DataOutputStream outputStream;
 
     public enum Action {
@@ -24,6 +21,7 @@ public abstract class AISuperClass {
         MOVE_BACKWARDS("MOVE_BACKWARDS"),
         STOP_MOVE("STOP_MOVE"),
         SHOOT("SHOOT");
+
         final private String text;
         Action(String text) {
             this.text = text;
@@ -38,7 +36,7 @@ public abstract class AISuperClass {
         bullets = new ArrayList<>();
     }
 
-    protected void send(AI.Action action) {
+    protected void send(Action action) {
         try {
             outputStream.writeBytes(action.getText() + "\n");
         }catch (IOException e) {
