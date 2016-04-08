@@ -474,14 +474,17 @@ public class AICompoGame extends ApplicationAdapter {
 									gameStatePacket += bullet.getID() + ";" + bullet.getOwner().getID() + ";" + bullet.getCenter().x + ";" + bullet.getCenter().y + ";" + bullet.getAngle() + "\n";
 								}
 								gameStatePacket += "BULLETS_END\n";
-								gameStatePacket += "MAP_BEGIN\n";
-								synchronized (player.removedTiles) {
-									for (Point tile : player.removedTiles) {
-										gameStatePacket += Integer.toString(tile.x) + ";" + Integer.toString(tile.y) + ";" + Integer.toString(Map.getTile(tile.x, tile.y)) + "\n";
+
+								if(player.removedTiles.size() > 0) {
+									gameStatePacket += "MAP_MODIFIED_BEGIN\n";
+									synchronized (player.removedTiles) {
+										for (Point tile : player.removedTiles) {
+											gameStatePacket += Integer.toString(tile.x) + ";" + Integer.toString(tile.y) + ";" + Integer.toString(Map.getTile(tile.x, tile.y)) + "\n";
+										}
+										player.removedTiles.clear();
 									}
-									player.removedTiles.clear();
+									gameStatePacket += "MAP_MODIFIED_END\n";
 								}
-								gameStatePacket += "MAP_END\n";
 								gameStatePacket += "\n";
 								out.writeBytes(gameStatePacket);
 								out.flush();
@@ -497,18 +500,12 @@ public class AICompoGame extends ApplicationAdapter {
 		
 		try {
 			// Send game state
-			String gameStatePacket = "START\n";
+			String gameStatePacket = "INIT\n";
 			gameStatePacket += "PLAYERS_BEGIN\n";
-			synchronized(AICompoGame.class) {
-				for(Player player : players) {
-					gameStatePacket += player.getID() + ";" + player.getName() + ";" + player.getCenter().x + ";" + player.getCenter().y + ";" + player.getAngle() + ";" + (player.getStatus() == Player.Status.ALIVE) + "\n";
-				}
-				gameStatePacket += "PLAYERS_END\n";
-
-				for(Player player : players) {
-					new DataOutputStream(player.getSocket().getOutputStream()).writeBytes(gameStatePacket);
-				}
+			for(Player player : players) {
+				gameStatePacket += player.getID() + ";" + player.getName() + ";" + player.getCenter().x + ";" + player.getCenter().y + ";" + player.getAngle() + ";" + (player.getStatus() == Player.Status.ALIVE) + "\n";
 			}
+			gameStatePacket += "PLAYERS_END\n";
 			gameStatePacket += "MAP_BEGIN\n";
 			for(int y = 0; y < Map.HEIGHT; ++y) {
 				for(int x = 0; x < Map.WIDTH; ++x) {
@@ -516,6 +513,11 @@ public class AICompoGame extends ApplicationAdapter {
 				}
 			}
 			gameStatePacket += "MAP_END\n";
+			gameStatePacket += "START\n";
+
+			for(Player player : players) {
+				new DataOutputStream(player.getSocket().getOutputStream()).writeBytes(gameStatePacket);
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

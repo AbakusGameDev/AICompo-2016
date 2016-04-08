@@ -4,6 +4,8 @@ import com.aicompo.game.AISuperClass;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 
+import java.awt.*;
+import java.util.ArrayList;
 import java.util.Random;
 
 // This AI selects a random point on the map, moves towards it
@@ -66,7 +68,18 @@ public class AI extends AISuperClass {
         send(MOVE_FORWARDS);
     }
 
-    public void mapChanged() {
-        // This function is called whenever the map changes
+    @Override
+    public void matchStarted() {
+        // Called after the map and players have been received the first time
+    }
+
+    @Override
+    public void matchEnded() {
+        // Called after when the match has ended
+    }
+
+    @Override
+    public void mapModified() {
+        // This function is called whenever the map modified
     }
 }

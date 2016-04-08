@@ -43,6 +43,8 @@ public abstract class AISuperClass {
         }
     }
 
-    public abstract void mapChanged();
     public abstract void update();
+    public abstract void matchStarted();
+    public abstract void matchEnded();
+    public abstract void mapModified();
 }

@@ -52,10 +52,16 @@ public class AIMain implements Runnable {
 					// Read server packets
 					String line;
 					while(!(line = bufferedReader.readLine()).isEmpty()) {
-						if(line.equals("START")) {
+						if(line.equals("INIT")) {
 							ai = new AI();
 							playerMap.clear();
 							bulletMap.clear();
+						}
+						else if(line.equals("START")) {
+							ai.matchStarted();
+						}
+						else if(line.equals("END")) {
+							ai.matchEnded();
 						}
 						else if(line.equals("PLAYERS_BEGIN")) {
 							// Input: PLAYERS_BEGIN
@@ -139,6 +145,22 @@ public class AIMain implements Runnable {
 								}
 							}
 						}
+						else if(line.equals("MAP_MODIFIED_BEGIN")) {
+							// Input: MAP_BEGIN
+							// This is where we parse the map.
+							// The data are send in the format:
+							// x;y;tile
+							// until MAP_END is received.
+
+							// Parse map
+							String mapDataString;
+							while(!(mapDataString = bufferedReader.readLine()).equals("MAP_MODIFIED_END")) {
+								String[] tileData = mapDataString.split(";");
+								Map.setTile(Integer.parseInt(tileData[0]), Integer.parseInt(tileData[1]), Integer.parseInt(tileData[2]));
+							}
+
+							ai.mapModified();
+						}
 						else if(line.equals("MAP_BEGIN")) {
 							// Input: MAP_BEGIN
 							// This is where we parse the map.
@@ -146,18 +168,11 @@ public class AIMain implements Runnable {
 							// x;y;tile
 							// until MAP_END is received.
 
-							boolean changed = false;
-
 							// Parse map
 							String mapDataString;
 							while(!(mapDataString = bufferedReader.readLine()).equals("MAP_END")) {
 								String[] tileData = mapDataString.split(";");
 								Map.setTile(Integer.parseInt(tileData[0]), Integer.parseInt(tileData[1]), Integer.parseInt(tileData[2]));
-								changed = true;
-							}
-
-							if(changed) {
-								ai.mapChanged();
 							}
 						}
 					}
