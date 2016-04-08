@@ -63,6 +63,8 @@ public class AI extends AISuperClass {
         // Move forwards and shoot
         send(Action.SHOOT);
         send(Action.MOVE_FORWARDS);
+
+        System.out.println(""+bullets.size());
     }
 
     public void mapReceived() {

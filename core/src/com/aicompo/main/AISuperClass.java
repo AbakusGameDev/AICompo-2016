@@ -12,7 +12,7 @@ public abstract class AISuperClass {
     public Player player;
     public ArrayList<Player> otherPlayers;
 
-    public ArrayList<Player> bullets;
+    public ArrayList<Bullet> bullets;
 
     public DataOutputStream outputStream;
 

@@ -42,7 +42,7 @@ public class Player extends Entity {
 		return angle;
 	}
 	
-	public Player(PlayerDescriptor descriptor, BitmapFont font, int spriteIndex, ArrayList<Bullet> bullets, int x, int y) {
+	public Player(PlayerDescriptor descriptor, BitmapFont font, int spriteIndex, ArrayList<Bullet> bullets, int x, int y, float initAngle) {
 		this.descriptor = descriptor;
 		this.bullets = bullets;
 		this.font = font;
@@ -54,7 +54,7 @@ public class Player extends Entity {
 		size = new Vector2(31.0f, 31.0f);
 		turnSpeed = 3.0f;
 		moveSpeed = 2.0f;
-		angle = 0.0f;
+		angle = initAngle;
 		shootCooldown = 0.0f;
 		moveScale = 0.0f;
 		turnScale = 0.0f;

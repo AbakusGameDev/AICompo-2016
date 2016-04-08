@@ -114,7 +114,7 @@ public class Main implements Runnable {
 							// id;ownerid;x;y;angle
 							// until BULLETS_END is received.
 
-							/*ArrayList<Integer> ids = new ArrayList<Integer>();
+							ArrayList<Integer> ids = new ArrayList<Integer>();
 
 							// Parse otherPlayers
 							String bulletsDataString;
@@ -127,50 +127,29 @@ public class Main implements Runnable {
 
 								// If player doesn't exist, create it
 								if(!bulletMap.containsKey(bulletID)) {
-									Bullet bullet = new com.aicompo.ai.Bullet(Integer.parseInt(bulletDataData[0]));
+									Bullet bullet = new com.aicompo.ai.Bullet(Integer.parseInt(bulletData[0]), playerMap.get(Integer.parseInt(bulletData[1])));
 
 									// Add to map
-									playerMap.put(playerID, player);
+									bulletMap.put(bulletID, bullet);
 
-									if(this.playerID == playerID) {
-										// If this is our player, store it
-										ai.player = player;
-									}
-									else {
-										// Else add to list of other otherPlayers
-										ai.otherPlayers.add(player);
-									}
+									// Add to list of bullets
+									ai.bullets.add(bullet);
 								}
 
-								// Update player values
-								playerMap.get(playerID).updateValues(playerData[1], new Vector2(Float.parseFloat(playerData[2]), Float.parseFloat(playerData[3])), Float.parseFloat(playerData[4]));
+								// Update bullet values
+								bulletMap.get(bulletID).updateValues(new Vector2(Float.parseFloat(bulletData[2]), Float.parseFloat(bulletData[3])), Float.parseFloat(bulletData[4]));
 
 								// Store id
-								ids.add(playerID);
+								ids.add(bulletID);
 							}
 
-							// Remove otherPlayers
-							if(!ids.contains(this.playerID)) {
-								playerMap.remove(this.playerID);
-								ai.player = null;
-							}
-
-							for(int i = ai.otherPlayers.size() - 1; i >= 0; i--) {
-								int playerID = ai.otherPlayers.get(i).getID();
-								if(!ids.contains(playerID)) {
-									playerMap.remove(playerID);
-									ai.otherPlayers.remove(i);
+							// Remove missing bullets
+							for(int i = ai.bullets.size() - 1; i >= 0; i--) {
+								int bulletID = ai.bullets.get(i).getID();
+								if(!ids.contains(bulletID)) {
+									bulletMap.remove(bulletID);
+									ai.bullets.remove(i);
 								}
-							}*/
-
-							// Parse bullets
-							String bulletDataString;
-							while(!(bulletDataString = bufferedReader.readLine()).equals("BULLETS_END")) {
-								// Split bullet data
-								String[] bulletData = bulletDataString.split(";");
-
-								// Add bullet to bullet list
-								bulletMap.put(Integer.parseInt(bulletData[0]), new Bullet(Integer.parseInt(bulletData[0]), Integer.parseInt(bulletData[1]), new Vector2(Float.parseFloat(bulletData[2]), Float.parseFloat(bulletData[3])), Float.parseFloat(bulletData[4])));
 							}
 						}
 						else if(line.equals("MAP_BEGIN")) {

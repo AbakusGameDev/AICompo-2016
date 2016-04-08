@@ -1,5 +1,6 @@
 package com.aicompo.game;
 
+import java.awt.*;
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -23,6 +24,7 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
+import com.badlogic.gdx.math.Vector2;
 
 public class AICompoGame extends ApplicationAdapter {
 	public enum State {
@@ -34,27 +36,34 @@ public class AICompoGame extends ApplicationAdapter {
 	
 	private static SpriteBatch batch;
 	private static OrthographicCamera camera;
+
 	private static ServerSocketChannel serverSocketChannel;
+
 	private static State state;
 	private static Sprite panelSprite;
 	private static Sprite floorSprite;
 	private static Sprite wallSprite;
-	private static float startCountDown;
-	private static float remainingTime;
+
+	private static float gameTimer;
+	private static boolean suddenDeath;
+
 	private static BitmapFont font;
 	private static BitmapFont fontPanel;
 	private static BitmapFont fontPlayer;
+
 	private static ArrayList<Player> players;
 	private static ArrayList<PlayerDescriptor> playerDescriptors;
 	private static ArrayList<Entity> entities;
 	private static ArrayList<Bullet> bullets;
+
 	private static Random random;
 	private static int mapIndex;
 	private static FileHandle[] mapFiles;
-	
+
+	public static final float GAME_TIME = 60.0f; // Sec
 	public static final int SERVER_PORT = 45556;
 	public static final String TEXT_HOTKEYS = "Press <1> to add AI player\nPress <2> to add controlled player\n";
-	public static final String TEXT_NEED_PLAYERS = "Need at least two otherPlayers to start\n\n" + TEXT_HOTKEYS;
+	public static final String TEXT_NEED_PLAYERS = "Need at least two players to start\n\n" + TEXT_HOTKEYS;
 	public static final String TEXT_PRESS_TO_START = "Press <ENTER> to start the game\n\n" + TEXT_HOTKEYS;
 	public static final String TEXT_STARTING_IN = "Starting in";
 	public static final String TEXT_GAME_STARTED = "GO!";
@@ -120,13 +129,14 @@ public class AICompoGame extends ApplicationAdapter {
 		fontPlayer.setColor(Color.WHITE);
 		fontPlayer.setUseIntegerPositions(true);
 		generator.dispose();
-		startCountDown = 0.0f;
-		remainingTime = 0.0f;
+		gameTimer = 0.0f;
 		state = State.WAITING_FOR_PLAYERS;
 		panelSprite = new Sprite(new Texture("panel.png"));
 		panelSprite.flip(false, true);
 		panelSprite.setPosition(Map.WIDTH * Map.TILE_SIZE, 0.0f);
 		panelSprite.setSize(280, 720);
+
+		tilesToRemove = new ArrayList<Point>();
 		mapIndex = 0;
 		mapFiles = Gdx.files.internal("maps/").list();
 		
@@ -172,7 +182,7 @@ public class AICompoGame extends ApplicationAdapter {
 			
 			if(Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
 				if(playerDescriptors.size() < 2) {
-					System.err.println("Two or more otherPlayers required to begin.");
+					System.err.println("Two or more players required to begin.");
 				}
 				else {
 					startGame();
@@ -188,9 +198,10 @@ public class AICompoGame extends ApplicationAdapter {
 			break;
 			
 		case GAME_STARTING:
-			startCountDown -= Gdx.graphics.getDeltaTime();
-			if(startCountDown <= 0.0f) {
+			gameTimer -= Gdx.graphics.getDeltaTime();
+			if(gameTimer <= 0.0f) {
 				state = State.GAME_RUNNING;
+				gameTimer = GAME_TIME;
 				for(PlayerDescriptor descriptor : playerDescriptors) {
 					descriptor.prevTickTime = System.nanoTime();
 					descriptor.getThread().start();
@@ -199,12 +210,24 @@ public class AICompoGame extends ApplicationAdapter {
 			break;
 			
 		case GAME_RUNNING:
-			if(players.size() >= 2) { 
-				remainingTime -= Gdx.graphics.getDeltaTime();
-				if(remainingTime <= 0.0f) {
-					while(!players.isEmpty()) {
-						removePlayer(players.get(0));
-					}
+			// Check for restart
+			if(Gdx.input.isKeyPressed(Input.Keys.R) && (Gdx.input.isKeyPressed(Input.Keys.CONTROL_RIGHT) || Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT))) {
+				state = State.GAME_DONE;
+			}
+
+			// Update entities
+			for(Entity entity : new ArrayList<Entity>(entities)) {
+				entity.update();
+			}
+
+			// Update game time
+			gameTimer -= Gdx.graphics.getDeltaTime();
+			if(gameTimer <= 0.0f) { // Sudden death
+				suddenDeath = true;
+				gameTimer = 2.0f;
+				if(tilesToRemove.size() > 0) {
+					Point point = tilesToRemove.remove((int) (Math.random() * tilesToRemove.size()));
+					Map.setTile(point.x, point.y, 0);
 				}
 			}
 			break;
@@ -212,7 +235,7 @@ public class AICompoGame extends ApplicationAdapter {
 		case GAME_DONE:
 			if(Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
 				if(playerDescriptors.size() < 2) {
-					System.err.println("Two or more otherPlayers required to begin.");
+					System.err.println("Two or more players required to begin.");
 				}
 				else {
 					startGame();
@@ -223,7 +246,8 @@ public class AICompoGame extends ApplicationAdapter {
 		default:
 			break;
 		}
-		
+
+		// Map switching
 		if(state == State.WAITING_FOR_PLAYERS || state == State.GAME_DONE) {
 			if(Gdx.input.isKeyJustPressed(Input.Keys.LEFT)) {
 				if(mapIndex == 0) {
@@ -243,7 +267,7 @@ public class AICompoGame extends ApplicationAdapter {
 			}
 		}
 
-		// Disconnect otherPlayers that don't respond
+		// Disconnect players that don't respond
 		synchronized(AICompoGame.class) {
 			for(PlayerDescriptor descriptor : new ArrayList<PlayerDescriptor>(playerDescriptors)) {
 				if(descriptor.getThread() != null && descriptor.getThread().isAlive()) {
@@ -261,12 +285,7 @@ public class AICompoGame extends ApplicationAdapter {
 			}
 		}
 
-		if(players.size() >= 2) { 
-			for(Entity entity : new ArrayList<Entity>(entities)) {
-				entity.update();
-			}
-		}
-		
+		// Setup sprite batch
 		batch.setProjectionMatrix(camera.combined);
 		batch.begin();
 		
@@ -283,7 +302,8 @@ public class AICompoGame extends ApplicationAdapter {
 				}
 			}
 		}
-		
+
+		// Draw entitites
 		for(Entity entity : new ArrayList<Entity>(entities)) {
 			entity.draw(batch);
 		}
@@ -295,13 +315,13 @@ public class AICompoGame extends ApplicationAdapter {
 		{
 			int i = 0;
 			for(PlayerDescriptor desc : playerDescriptors) {
-				fontPanel.draw(batch, desc.getName() + " [" + desc.getStatus() + "]", 740, 30 + 20 * i++);
+				fontPanel.draw(batch, desc.getName() + " [" + desc.getStatus() + "]", 740, 42 + 20 * i++);
 			}
 			
 			if(state != State.WAITING_FOR_PLAYERS) {
 				i++;
-				fontPanel.draw(batch, "Players remaining: " + players.size(), 740, 30 + 20 * i++);
-				fontPanel.draw(batch, "Time remaining: " + (int) remainingTime + " seconds", 740, 30 + 20 * i++);
+				fontPanel.draw(batch, "Players remaining: " + players.size(), 740, 42 + 20 * i++);
+				fontPanel.draw(batch, "Time remaining: " + (state == State.GAME_RUNNING ? (suddenDeath ? "Sudden death" : (int) gameTimer + " seconds") : ((int) GAME_TIME)), 740, 42 + 20 * i++);
 			}
 		}
 		
@@ -316,9 +336,9 @@ public class AICompoGame extends ApplicationAdapter {
 			}
 		}
 		else if(state == State.GAME_STARTING) {
-			centerText = TEXT_STARTING_IN + "\n" + Integer.toString((int)Math.ceil(startCountDown));
+			centerText = TEXT_STARTING_IN + "\n" + Integer.toString((int)Math.ceil(gameTimer));
 		}
-		else if(state == State.GAME_RUNNING && remainingTime >= 178.0f) {
+		else if(state == State.GAME_RUNNING) {
 			centerText = TEXT_GAME_STARTED;
 		}
 		else if(state == State.GAME_DONE) {
@@ -354,13 +374,16 @@ public class AICompoGame extends ApplicationAdapter {
 		
 		int x, y;
 	}
-	
+
+	private ArrayList<Point> tilesToRemove;
+
 	private void startGame() {
 		// Clear stuff
 		synchronized(AICompoGame.class) {
 			players.clear();
 			bullets.clear();
 			entities.clear();
+			tilesToRemove.clear();
 		}
 		
 		// Load map
@@ -384,7 +407,11 @@ public class AICompoGame extends ApplicationAdapter {
 							Map.setTile(x, y, 0);
 						}
 						else if(c == '?') {
-							Map.setTile(x, y, y == 0 || x == 0 || y == Map.HEIGHT - 1 || x == Map.WIDTH - 1 || random.nextFloat() < 0.1f ? 1 : 0);
+							Map.setTile(x, y, random.nextFloat() < 0.1f ? 1 : 0);
+						}
+
+						if(y != 0 && x != 0 && y != Map.HEIGHT - 1 && x != Map.WIDTH - 1 && Map.getTile(x, y) == 1) {
+							tilesToRemove.add(new Point(x, y));
 						}
 					}
 					
@@ -399,12 +426,14 @@ public class AICompoGame extends ApplicationAdapter {
 			}
 		}
 
-		// Spawn otherPlayers
+		// Spawn players
 		int spriteIndex = 0;
 		for(PlayerDescriptor descriptor : playerDescriptors) {
 			SpawnPoint spawn = getSpawnPoint();
-			Player player = new Player(descriptor, fontPlayer, 1 + (spriteIndex++ % 6), bullets, spawn.x, spawn.y);
-			
+			float angle = Math.round((new Vector2(Map.WIDTH / 2.0f - spawn.x, Map.HEIGHT / 2.0f - spawn.y).scl(Map.TILE_SIZEF)).angle() / 90.0f) * 90.0f;
+			Player player = new Player(descriptor, fontPlayer, 1 + (spriteIndex++ % 6), bullets, spawn.x, spawn.y, angle);
+
+			// Create connection thread
 			Thread thread = new Thread(new Runnable() {
 				@Override
 				public void run() {
@@ -508,8 +537,8 @@ public class AICompoGame extends ApplicationAdapter {
 		}
 		
 		state = State.GAME_STARTING;
-		startCountDown = 3.0f;
-		remainingTime = 180.0f;
+		gameTimer = 3.0f;
+		suddenDeath = false;
 	}
 
 	private SpawnPoint getSpawnPoint() {
