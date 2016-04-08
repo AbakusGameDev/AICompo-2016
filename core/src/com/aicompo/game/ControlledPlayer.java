@@ -32,27 +32,27 @@ public class ControlledPlayer implements Runnable {
 
 					// com.aicompo.game.Player movement (WASD / cursor keys)
 					if(Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) {
-						out.writeBytes("MOVE_FORWARDS\n");
+						out.writeBytes(AISuperClass.MOVE_FORWARDS + "\n");
 					}
 					else if(Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
-						out.writeBytes("MOVE_BACKWARDS\n");
+						out.writeBytes(AISuperClass.MOVE_BACKWARDS + "\n");
 					}
 					else {
-						out.writeBytes("STOP_MOVE\n");
+						out.writeBytes(AISuperClass.STOP_MOVE + "\n");
 					}
 
 					if(Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
-						out.writeBytes("TURN_RIGHT\n");
+						out.writeBytes(AISuperClass.TURN_RIGHT + "\n");
 					}
 					else if(Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
-						out.writeBytes("TURN_LEFT\n");
+						out.writeBytes(AISuperClass.TURN_LEFT + "\n");
 					}
 					else {
-						out.writeBytes("STOP_TURN\n");
+						out.writeBytes(AISuperClass.STOP_TURN + "\n");
 					}
 
 					if(Gdx.input.isKeyPressed(Input.Keys.SPACE)) {
-						out.writeBytes("SHOOT\n");
+						out.writeBytes(AISuperClass.SHOOT + "\n");
 					}
 
 					// End turn

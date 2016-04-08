@@ -13,32 +13,23 @@ public abstract class AISuperClass {
     public ArrayList<Bullet> bullets;
     public DataOutputStream outputStream;
 
-    public enum Action {
-        TURN_LEFT("TURN_LEFT"),
-        TURN_RIGHT("TURN_RIGHT"),
-        STOP_TURN("STOP_TURN"),
-        MOVE_FORWARDS("MOVE_FORWARDS"),
-        MOVE_BACKWARDS("MOVE_BACKWARDS"),
-        STOP_MOVE("STOP_MOVE"),
-        SHOOT("SHOOT");
-
-        final private String text;
-        Action(String text) {
-            this.text = text;
-        }
-        public String getText() {
-            return text;
-        }
-    }
+    public final static int TURN_LEFT = 0;
+    public final static int TURN_RIGHT = 1;
+    public final static int STOP_TURN = 2;
+    public final static int MOVE_FORWARDS = 3;
+    public final static int MOVE_BACKWARDS = 4;
+    public final static int STOP_MOVE = 5;
+    public final static int SHOOT = 6;
+    public final static int NAME = 7;
 
     public AISuperClass() {
         otherPlayers = new ArrayList<>();
         bullets = new ArrayList<>();
     }
 
-    protected void send(Action action) {
+    protected void send(int action) {
         try {
-            outputStream.writeBytes(action.getText() + "\n");
+            outputStream.writeBytes(action + "\n");
         }catch (IOException e) {
             e.printStackTrace();
         }
@@ -46,7 +37,7 @@ public abstract class AISuperClass {
 
     protected void setName(String name) {
         try {
-            outputStream.writeBytes("NAME " + name + "\n");
+            outputStream.writeBytes(NAME + "\n" + name + "\n");
         }catch (IOException e) {
             e.printStackTrace();
         }

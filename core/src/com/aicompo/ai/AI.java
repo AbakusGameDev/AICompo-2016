@@ -27,13 +27,13 @@ public class AI extends AISuperClass {
     public void update() {
         // To perform an action use the send() function
         // with one of the following values:
-        // Action.TURN_LEFT - Turn your tank left
-        // Action.TURN_RIGHT - Turn your tank right
-        // Action.STOP_TURN - Stop your tank turning
-        // Action.MOVE_FORWARDS - Move your tank forwards
-        // Action.MOVE_BACKWARDS - Move your tank backwards
-        // Action.STOP_MOVE - Stop your tank moving
-        // Action.SHOOT - Shoot a bullet (has a 1 second cooldown)
+        // TURN_LEFT - Turn your tank left
+        // TURN_RIGHT - Turn your tank right
+        // STOP_TURN - Stop your tank turning
+        // MOVE_FORWARDS - Move your tank forwards
+        // MOVE_BACKWARDS - Move your tank backwards
+        // STOP_MOVE - Stop your tank moving
+        // SHOOT - Shoot a bullet (has a 1 second cooldown)
         // You can also use setName to change your name
 
         // You can find other players with the otherPlayers ArrayList
@@ -55,14 +55,16 @@ public class AI extends AISuperClass {
 
         // Rotate towards it
         if (cross < 0.0f) {
-            send(Action.TURN_RIGHT);
+            send(TURN_RIGHT);
         } else if (cross > 0.0f) {
-            send(Action.TURN_LEFT);
+            send(TURN_LEFT);
         }
 
         // Move forwards and shoot
-        send(Action.SHOOT);
-        send(Action.MOVE_FORWARDS);
+        send(SHOOT);
+        send(MOVE_FORWARDS);
+
+        setName("Test: "+Math.random()*20);
     }
 
     public void mapChanged() {
