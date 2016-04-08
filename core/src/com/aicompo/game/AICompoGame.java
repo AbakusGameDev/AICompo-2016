@@ -498,13 +498,6 @@ public class AICompoGame extends ApplicationAdapter {
 		try {
 			// Send game state
 			String gameStatePacket = "START\n";
-			gameStatePacket += "MAP_BEGIN\n";
-			for(int y = 0; y < Map.HEIGHT; ++y) {
-				for(int x = 0; x < Map.WIDTH; ++x) {
-					gameStatePacket += Integer.toString(x) + ";" + Integer.toString(y) + ";" + Integer.toString(Map.getTile(x, y)) + "\n";
-				}
-			}
-			gameStatePacket += "MAP_END\n";
 			gameStatePacket += "PLAYERS_BEGIN\n";
 			synchronized(AICompoGame.class) {
 				for(Player player : players) {
@@ -515,8 +508,14 @@ public class AICompoGame extends ApplicationAdapter {
 				for(Player player : players) {
 					new DataOutputStream(player.getSocket().getOutputStream()).writeBytes(gameStatePacket);
 				}
-
 			}
+			gameStatePacket += "MAP_BEGIN\n";
+			for(int y = 0; y < Map.HEIGHT; ++y) {
+				for(int x = 0; x < Map.WIDTH; ++x) {
+					gameStatePacket += Integer.toString(x) + ";" + Integer.toString(y) + ";" + Integer.toString(Map.getTile(x, y)) + "\n";
+				}
+			}
+			gameStatePacket += "MAP_END\n";
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
