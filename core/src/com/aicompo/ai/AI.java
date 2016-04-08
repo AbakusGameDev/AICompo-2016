@@ -63,8 +63,6 @@ public class AI extends AISuperClass {
         // Move forwards and shoot
         send(SHOOT);
         send(MOVE_FORWARDS);
-
-        setName("Test: "+Math.random()*20);
     }
 
     public void mapChanged() {
