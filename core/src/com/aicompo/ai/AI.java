@@ -17,6 +17,7 @@ public class AI extends AISuperClass {
     private long prevTargetTime;
 
     public AI() {
+        // Called at the start of a match
         // Initialize variables
         random = new Random();
         target = null;

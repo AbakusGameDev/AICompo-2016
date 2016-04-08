@@ -19,7 +19,7 @@ public class AIMain implements Runnable {
 	private static String hostIp = "127.0.0.1";
 	private static String hostPort = "45556";
 
-	private AI ai = new AI();
+	private AI ai;
 	private int playerID;
 
 	public HashMap<Integer, Player> playerMap;
@@ -52,11 +52,16 @@ public class AIMain implements Runnable {
 					// Read server packets
 					String line;
 					while(!(line = bufferedReader.readLine()).isEmpty()) {
-						if(line.equals("PLAYERS_BEGIN")) {
+						if(line.equals("START")) {
+							ai = new AI();
+							playerMap.clear();
+							bulletMap.clear();
+						}
+						else if(line.equals("PLAYERS_BEGIN")) {
 							// Input: PLAYERS_BEGIN
 							// This is where we parse the otherPlayers.
 							// The data is send in the given format:
-							// id;name;x;y;angle
+							// id;name;x;y;angle;alive
 							// until PLAYERS_END is received.
 
 							// Parse otherPlayers

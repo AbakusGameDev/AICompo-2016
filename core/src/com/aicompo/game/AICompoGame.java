@@ -397,7 +397,7 @@ public class AICompoGame extends ApplicationAdapter {
 			}
 	
 			if(y != Map.HEIGHT) {
-				System.err.println("com.aicompo.game.Map file '" + mapFiles[mapIndex].name() + "' has an incorrect amount of lines");
+				System.err.println("Map file '" + mapFiles[mapIndex].name() + "' has an incorrect amount of lines");
 			}
 		}
 
@@ -423,10 +423,6 @@ public class AICompoGame extends ApplicationAdapter {
 						String line;
 						while((line = bufferedReader.readLine()) != null) {
 							if(!line.isEmpty()) {
-								if(line.length() > 1) {
-									System.out.println("huh");
-									continue;
-								}
 								int id = Integer.parseInt(line);
 								if(id == AISuperClass.TURN_LEFT) {
 									player.setTurnScale(-1.0f);
@@ -459,7 +455,7 @@ public class AICompoGame extends ApplicationAdapter {
 							else {
 								// If the game has ended
 								if(state == State.GAME_DONE) {
-									out.writeBytes("RESTART\n");
+									out.writeBytes("END\n");
 									out.flush();
 									return;
 								}
@@ -501,7 +497,7 @@ public class AICompoGame extends ApplicationAdapter {
 		
 		try {
 			// Send game state
-			String gameStatePacket = "";
+			String gameStatePacket = "START\n";
 			gameStatePacket += "MAP_BEGIN\n";
 			for(int y = 0; y < Map.HEIGHT; ++y) {
 				for(int x = 0; x < Map.WIDTH; ++x) {
