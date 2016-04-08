@@ -356,6 +356,7 @@ public class AICompoGame extends ApplicationAdapter {
 	private void startGame() {
 		// Clear stuff
 		synchronized(AICompoGame.class) {
+			playersAlive.clear();
 			bullets.clear();
 			tilesToRemove.clear();
 		}
@@ -421,31 +422,41 @@ public class AICompoGame extends ApplicationAdapter {
 						BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(player.getSocket().getInputStream()));
 						String line;
 						while((line = bufferedReader.readLine()) != null) {
-							if(line.equals("TURN_LEFT")) {
-								player.setTurnScale(-1.0f);
+							if(!line.isEmpty()) {
+								if(line.length() > 1) {
+									System.out.println("huh");
+									continue;
+								}
+								int id = Integer.parseInt(line);
+								if(id == AISuperClass.TURN_LEFT) {
+									player.setTurnScale(-1.0f);
+								}
+								else if(id == AISuperClass.TURN_RIGHT) {
+									player.setTurnScale(1.0f);
+								}
+								else  if(id == AISuperClass.STOP_TURN) {
+									player.setTurnScale(0.0f);
+								}
+								else if(id == AISuperClass.MOVE_FORWARDS) {
+									player.setMovementScale(1.0f);
+								}
+								else if(id == AISuperClass.MOVE_BACKWARDS) {
+									player.setMovementScale(-1.0f);
+								}
+								else if(id == AISuperClass.STOP_MOVE) {
+									player.setMovementScale(0.0f);
+								}
+								else if(id == AISuperClass.SHOOT) {
+									player.shoot();
+								}
+								else if(id == AISuperClass.NAME) {
+									player.setName(bufferedReader.readLine());
+								}
+								else {
+									System.err.println("'" + player.getName() + "' tried to perform unknown command '" + id + "'.");
+								}
 							}
-							else if(line.equals("TURN_RIGHT")) {
-								player.setTurnScale(1.0f);
-							}
-							else  if(line.equals("STOP_TURN")) {
-								player.setTurnScale(0.0f);
-							}
-							else if(line.equals("MOVE_FORWARDS")) {
-								player.setMovementScale(1.0f);
-							}
-							else if(line.equals("MOVE_BACKWARDS")) {
-								player.setMovementScale(-1.0f);
-							}
-							else if(line.equals("STOP_MOVE")) {
-								player.setMovementScale(0.0f);
-							}
-							else if(line.equals("SHOOT")) {
-								player.shoot();
-							}
-							else if(line.contains("NAME ")) {
-								player.setName(line.substring(5));
-							}
-							else if(line.isEmpty()) {
+							else {
 								// If the game has ended
 								if(state == State.GAME_DONE) {
 									out.writeBytes("RESTART\n");
@@ -478,9 +489,6 @@ public class AICompoGame extends ApplicationAdapter {
 								gameStatePacket += "\n";
 								out.writeBytes(gameStatePacket);
 								out.flush();
-							}
-							else {
-								System.err.println("'" + player.getName() + "' tried to perform unknown command '" + line + "'.");
 							}
 						}
 					} catch (IOException e) {
