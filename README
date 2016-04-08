@@ -5,9 +5,9 @@ To run the game:
 
 Adding your AI to the game:
 
-When CTRL + 1 is pressed in the waiting menu, the game will add an DemoAIPlayer.
+When <1> is pressed in the waiting menu, the game will add an AI player.
 This class is documented and can be modified.
-It is found in com.aicompo.example alongside other example code.
+It is found in com.aicompo.game.ai alongside other example code.
 The main function to look at is 'public void run()', and 
 your AI code should go where it says 'YOUR AI CODE HERE'
 
@@ -15,6 +15,26 @@ How to connect:
 
 Open a TCP socket and connect to the host using port 45556.
 Your player ID will be sent right after you've connected.
+
+Available tank moves:
+
+NAME newName - Changes your name (in this exmple to 'newName')
+TURN_LEFT - Turns your tank left
+TURN_RIGHT - Turns your tank right
+STOP_TURN - Stop your tank turning
+MOVE_FORWARDS - Move your tank forwards
+MOVE_BACKWARDS - Move your tank backwards
+STOP_MOVE - Stop your tank moving
+SHOOT - Shoot (has a 1 second cooldown)
+
+Dimensions and velocities of stuff:
+
+Player collision box: 32x32
+Player movement speed: 2 pixels per frame
+Player turning speed: 3 degrees per frame
+Bullet collision box: 1x1 (a single point)
+Bullet speed: 10 pixels per frame
+Tile/block size: 40x40
 
 Receiving the map:
 
@@ -37,28 +57,6 @@ When restarting:
 
 RESTART - Indicates the game is about to restart
 
-Available tank moves:
-
-NAME newName - Changes your name (in this exmple to 'newName')
-TURN_LEFT - Turns your tank left
-TURN_RIGHT - Turns your tank right
-STOP_TURN - Stop your tank turning
-MOVE_FORWARDS - Move your tank forwards
-MOVE_BACKWARDS - Move your tank backwards
-STOP_MOVE - Stop your tank moving
-SHOOT - Shoot (has a 1 second cooldown)
-
-Dimensions and velocities of stuff:
-
-Player collision box: 32x32
-Player movement speed: 2 pixels per frame
-Player turning speed: 3 degrees per frame
-Bullet collision box: 1x1 (a single point)
-Bullet speed: 10 pixels per frame
-Tile/block size: 40x40
-
-Player collision box:
-
 Note:
 
 All commands should end with a newline (\n)!
@@ -68,4 +66,3 @@ An empty line received from the server indicates it has finished sending the gam
 The game uses the libgdx game framework, so any questions regarding their API can be found in their documentation: http://libgdx.badlogicgames.com/nightlies/docs/api/
 
 Made by Marcus Loo Vergara for Abakus GameDev, 2015.
-Neste gang blir dokumentasjonen på norsk :P
