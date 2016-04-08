@@ -402,7 +402,7 @@ public class AICompoGame extends ApplicationAdapter {
 		}
 
 		// Spawn players
-		for(Player player : players) {
+		for(final Player player : players) {
 			Point spawn = getSpawnPoint();
 			float angle = Math.round((new Vector2(Map.WIDTH / 2.0f - spawn.x, Map.HEIGHT / 2.0f - spawn.y).scl(Map.TILE_SIZEF)).angle() / 90.0f) * 90.0f;
 			player.spawn(spawn.x, spawn.y, angle);
