@@ -52,15 +52,15 @@ public class AICompoGame extends ApplicationAdapter {
 	private static BitmapFont fontPlayer;
 
 	private static ArrayList<Player> players;
-	private static ArrayList<PlayerDescriptor> playerDescriptors;
-	private static ArrayList<Entity> entities;
+	private static ArrayList<Player> playersAlive;
 	private static ArrayList<Bullet> bullets;
 
 	private static Random random;
 	private static int mapIndex;
 	private static FileHandle[] mapFiles;
+	private ArrayList<Point> tilesToRemove;
 
-	public static final float GAME_TIME = 60.0f; // Sec
+	public static final float GAME_TIME = 2.0f; // Sec
 	public static final int SERVER_PORT = 45556;
 	public static final String TEXT_HOTKEYS = "Press <1> to add AI player\nPress <2> to add controlled player\n";
 	public static final String TEXT_NEED_PLAYERS = "Need at least two players to start\n\n" + TEXT_HOTKEYS;
@@ -71,41 +71,6 @@ public class AICompoGame extends ApplicationAdapter {
 	public static final String TEXT_GAME_RESTART = "\n\n\nPress <ENTER> to restart\n";
 	
 	static public final String DEFAULT_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890\"!`?'.,;:()[]{}<>|/@\\^$-%+=#_&~*\u0080\u0081\u0082\u0083\u0084\u0085\u0086\u0087\u0088\u0089\u008A\u008B\u008C\u008D\u008E\u008F\u0090\u0091\u0092\u0093\u0094\u0095\u0096\u0097\u0098\u0099\u009A\u009B\u009C\u009D\u009E\u009F\u00A0\u00A1\u00A2\u00A3\u00A4\u00A5\u00A6\u00A7\u00A8\u00A9\u00AA\u00AB\u00AC\u00AD\u00AE\u00AF\u00B0\u00B1\u00B2\u00B3\u00B4\u00B5\u00B6\u00B7\u00B8\u00B9\u00BA\u00BB\u00BC\u00BD\u00BE\u00BF\u00C0\u00C1\u00C2\u00C3\u00C4\u00C5\u00C6\u00C7\u00C8\u00C9\u00CA\u00CB\u00CC\u00CD\u00CE\u00CF\u00D0\u00D1\u00D2\u00D3\u00D4\u00D5\u00D6\u00D7\u00D8\u00D9\u00DA\u00DB\u00DC\u00DD\u00DE\u00DF\u00E0\u00E1\u00E2\u00E3\u00E4\u00E5\u00E6\u00E7\u00E8\u00E9\u00EA\u00EB\u00EC\u00ED\u00EE\u00EF\u00F0\u00F1\u00F2\u00F3\u00F4\u00F5\u00F6\u00F7\u00F8\u00F9\u00FA\u00FB\u00FC\u00FD\u00FE\u00FF";
-
-	static void addEntity(Entity e) {
-		entities.add(e);
-	}
-	
-	public static void removeEntity(Entity e) {
-		entities.remove(e);
-	}
-	
-	public static void addBullet(Bullet b) {
-		synchronized(AICompoGame.class) {
-			bullets.add(b);
-		}
-	}
-	
-	public static void removeBullet(Bullet b) {
-		synchronized(AICompoGame.class) {
-			bullets.remove(b);
-		}
-	}
-	
-	public static void addPlayer(Player p) {
-		synchronized(AICompoGame.class) {
-			players.add(p);
-		}
-	}
-	
-	public static void removePlayer(Player p) {
-		synchronized(AICompoGame.class) {
-			players.remove(p);
-			if(players.size() <= 1) {
-				state = State.GAME_DONE;
-			}
-		}
-	}
 	
 	@SuppressWarnings("deprecation")
 	@Override
@@ -114,9 +79,8 @@ public class AICompoGame extends ApplicationAdapter {
 		random = new Random();
 		camera = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 		camera.setToOrtho(true, camera.viewportWidth, camera.viewportHeight);
-		entities = new ArrayList<Entity>();
 		players = new ArrayList<Player>();
-		playerDescriptors = new ArrayList<PlayerDescriptor>();
+		playersAlive = new ArrayList<Player>();
 		bullets = new ArrayList<Bullet>();
 		FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("Days.ttf"));
 		font = generator.generateFont(18, DEFAULT_CHARS, true);
@@ -170,18 +134,18 @@ public class AICompoGame extends ApplicationAdapter {
 				if(sc != null) {
 					String name = new BufferedReader(new InputStreamReader(sc.socket().getInputStream())).readLine();
 					
-					PlayerDescriptor descriptor = new PlayerDescriptor(sc.socket(), name);
-					playerDescriptors.add(descriptor);
-					new DataOutputStream(sc.socket().getOutputStream()).writeBytes(Integer.toString(descriptor.getID()) + "\n");
+					Player player = new Player(sc.socket(), name, bullets);
+					players.add(player);
+					new DataOutputStream(sc.socket().getOutputStream()).writeBytes(Integer.toString(player.getID()) + "\n");
 					
-					System.out.println("'" + name + "' (" + descriptor.getID() + ") connected.");
+					System.out.println("'" + name + "' (" + player.getID() + ") connected.");
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 			
 			if(Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
-				if(playerDescriptors.size() < 2) {
+				if(players.size() < 2) {
 					System.err.println("Two or more players required to begin.");
 				}
 				else {
@@ -202,9 +166,9 @@ public class AICompoGame extends ApplicationAdapter {
 			if(gameTimer <= 0.0f) {
 				state = State.GAME_RUNNING;
 				gameTimer = GAME_TIME;
-				for(PlayerDescriptor descriptor : playerDescriptors) {
-					descriptor.prevTickTime = System.nanoTime();
-					descriptor.getThread().start();
+				for(Player player : players) {
+					player.previousPacketTime = System.nanoTime();
+					player.getThread().start();
 				}
 			}
 			break;
@@ -215,9 +179,23 @@ public class AICompoGame extends ApplicationAdapter {
 				state = State.GAME_DONE;
 			}
 
-			// Update entities
-			for(Entity entity : new ArrayList<Entity>(entities)) {
-				entity.update();
+			// Update players
+			for(Player player : new ArrayList<Player>(playersAlive)) {
+				player.update();
+				if(player.getStatus() == Player.Status.DEAD) {
+					playersAlive.remove(player);
+					if(playersAlive.size() < 2) {
+						state = State.GAME_DONE;
+					}
+				}
+			}
+
+			// Update bullets
+			for(Bullet bullet : new ArrayList<Bullet>(bullets)) {
+				bullet.update();
+				if(bullet.isDestroyed()) {
+					bullets.remove(bullet);
+				}
 			}
 
 			// Update game time
@@ -226,15 +204,20 @@ public class AICompoGame extends ApplicationAdapter {
 				suddenDeath = true;
 				gameTimer = 2.0f;
 				if(tilesToRemove.size() > 0) {
-					Point point = tilesToRemove.remove((int) (Math.random() * tilesToRemove.size()));
+					Point point = tilesToRemove.remove(random.nextInt(tilesToRemove.size()));
 					Map.setTile(point.x, point.y, 0);
+					for(Player player : playersAlive) {
+						synchronized (player.removedTiles) {
+							player.removedTiles.add(point);
+						}
+					}
 				}
 			}
 			break;
 			
 		case GAME_DONE:
 			if(Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
-				if(playerDescriptors.size() < 2) {
+				if(players.size() < 2) {
 					System.err.println("Two or more players required to begin.");
 				}
 				else {
@@ -268,18 +251,18 @@ public class AICompoGame extends ApplicationAdapter {
 		}
 
 		// Disconnect players that don't respond
-		synchronized(AICompoGame.class) {
-			for(PlayerDescriptor descriptor : new ArrayList<PlayerDescriptor>(playerDescriptors)) {
-				if(descriptor.getThread() != null && descriptor.getThread().isAlive()) {
-					if(System.nanoTime() - descriptor.prevTickTime > 3000000000L) {
+		for(Player player : new ArrayList<Player>(players)) {
+			if(player.getThread() != null && player.getThread().isAlive()) {
+				if(System.nanoTime() - player.previousPacketTime > 3000000000L) {
+					synchronized(AICompoGame.class) {
 						try {
-							descriptor.getSocket().close();
-							descriptor.getThread().interrupt();
+							player.getSocket().close();
+							player.getThread().interrupt();
 						} catch (IOException e) {
 							e.printStackTrace();
 						}
-						playerDescriptors.remove(descriptor);
-						System.out.println("'" + descriptor.getName() + "' (" + descriptor.getID() + ") was disconnected.");
+						players.remove(player);
+						System.out.println("'" + player.getName() + "' was disconnected (timeout).");
 					}
 				}
 			}
@@ -303,9 +286,14 @@ public class AICompoGame extends ApplicationAdapter {
 			}
 		}
 
-		// Draw entitites
-		for(Entity entity : new ArrayList<Entity>(entities)) {
-			entity.draw(batch);
+		// Draw bullets
+		for(Bullet bullet : new ArrayList<Bullet>(bullets)) {
+			bullet.draw(batch);
+		}
+
+		// Draw players
+		for(Player player : new ArrayList<Player>(playersAlive)) {
+			player.draw(batch, fontPlayer);
 		}
 		
 		panelSprite.draw(batch);
@@ -314,13 +302,13 @@ public class AICompoGame extends ApplicationAdapter {
 		font.draw(batch, "Players:", 740, 10);
 		{
 			int i = 0;
-			for(PlayerDescriptor desc : playerDescriptors) {
-				fontPanel.draw(batch, desc.getName() + " [" + desc.getStatus() + "]", 740, 42 + 20 * i++);
+			for(Player player : players) {
+				fontPanel.draw(batch, player.getName() + " [" + player.getStatus() + "]", 740, 42 + 20 * i++);
 			}
 			
 			if(state != State.WAITING_FOR_PLAYERS) {
 				i++;
-				fontPanel.draw(batch, "Players remaining: " + players.size(), 740, 42 + 20 * i++);
+				fontPanel.draw(batch, "Players remaining: " + playersAlive.size(), 740, 42 + 20 * i++);
 				fontPanel.draw(batch, "Time remaining: " + (state == State.GAME_RUNNING ? (suddenDeath ? "Sudden death" : (int) gameTimer + " seconds") : ((int) GAME_TIME)), 740, 42 + 20 * i++);
 			}
 		}
@@ -328,7 +316,7 @@ public class AICompoGame extends ApplicationAdapter {
 		// Set center text
 		String centerText = "";
 		if(state == State.WAITING_FOR_PLAYERS) {
-			if(playerDescriptors.size() < 2) {
+			if(players.size() < 2) {
 				centerText = TEXT_NEED_PLAYERS;
 			}
 			else {
@@ -338,14 +326,14 @@ public class AICompoGame extends ApplicationAdapter {
 		else if(state == State.GAME_STARTING) {
 			centerText = TEXT_STARTING_IN + "\n" + Integer.toString((int)Math.ceil(gameTimer));
 		}
-		else if(state == State.GAME_RUNNING) {
+		else if(state == State.GAME_RUNNING && gameTimer >= GAME_TIME - 2.0f) {
 			centerText = TEXT_GAME_STARTED;
 		}
 		else if(state == State.GAME_DONE) {
-			if(players.size() == 1) {
-				centerText = players.get(0).getDescriptor().getName() + " Won!";
+			if(playersAlive.size() == 1) {
+				centerText = playersAlive.get(0).getName() + " Won!";
 			}
-			else if(players.size() == 0) {
+			else if(playersAlive.size() == 0) {
 				centerText = TEXT_TIE;
 			}
 			centerText += TEXT_GAME_RESTART;
@@ -365,24 +353,11 @@ public class AICompoGame extends ApplicationAdapter {
 		
 		batch.end();
 	}
-	
-	private class SpawnPoint {
-		public SpawnPoint(int x, int y) {
-			this.x = x;
-			this.y = y;
-		}
-		
-		int x, y;
-	}
-
-	private ArrayList<Point> tilesToRemove;
 
 	private void startGame() {
 		// Clear stuff
 		synchronized(AICompoGame.class) {
-			players.clear();
 			bullets.clear();
-			entities.clear();
 			tilesToRemove.clear();
 		}
 		
@@ -427,11 +402,11 @@ public class AICompoGame extends ApplicationAdapter {
 		}
 
 		// Spawn players
-		int spriteIndex = 0;
-		for(PlayerDescriptor descriptor : playerDescriptors) {
-			SpawnPoint spawn = getSpawnPoint();
+		for(Player player : players) {
+			Point spawn = getSpawnPoint();
 			float angle = Math.round((new Vector2(Map.WIDTH / 2.0f - spawn.x, Map.HEIGHT / 2.0f - spawn.y).scl(Map.TILE_SIZEF)).angle() / 90.0f) * 90.0f;
-			Player player = new Player(descriptor, fontPlayer, 1 + (spriteIndex++ % 6), bullets, spawn.x, spawn.y, angle);
+			player.spawn(spawn.x, spawn.y, angle);
+			playersAlive.add(player);
 
 			// Create connection thread
 			Thread thread = new Thread(new Runnable() {
@@ -439,12 +414,12 @@ public class AICompoGame extends ApplicationAdapter {
 				public void run() {
 					try {
 						// Send newline
-						DataOutputStream out = new DataOutputStream(descriptor.getSocket().getOutputStream());
+						DataOutputStream out = new DataOutputStream(player.getSocket().getOutputStream());
 						out.writeBytes("\n");
 						out.flush();
 						
 						// Listen for input
-						BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(descriptor.getSocket().getInputStream()));
+						BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(player.getSocket().getInputStream()));
 						String line;
 						while((line = bufferedReader.readLine()) != null) {
 							if(line.equals("TURN_LEFT")) {
@@ -469,7 +444,7 @@ public class AICompoGame extends ApplicationAdapter {
 								player.shoot();
 							}
 							else if(line.contains("NAME ")) {
-								descriptor.setName(line.substring(5));
+								player.setName(line.substring(5));
 							}
 							else if(line.isEmpty()) {
 								// If the game has ended
@@ -479,13 +454,13 @@ public class AICompoGame extends ApplicationAdapter {
 									return;
 								}
 
-								descriptor.prevTickTime = System.nanoTime();
+								player.previousPacketTime = System.nanoTime();
 
 								// Send game state
 								String gameStatePacket = "";
 								gameStatePacket += "PLAYERS_BEGIN\n";
 								for(Player player : new ArrayList<Player>(players)) {
-									gameStatePacket += player.getDescriptor().getID() + ";" + player.getDescriptor().getName() + ";" + player.getCenter().x + ";" + player.getCenter().y + ";" + player.getAngle() + "\n";
+									gameStatePacket += player.getID() + ";" + player.getName() + ";" + player.getCenter().x + ";" + player.getCenter().y + ";" + player.getAngle() + ";" + (player.getStatus() == Player.Status.ALIVE) + "\n";
 								}
 								gameStatePacket += "PLAYERS_END\n";
 								gameStatePacket += "BULLETS_BEGIN\n";
@@ -493,12 +468,20 @@ public class AICompoGame extends ApplicationAdapter {
 									gameStatePacket += bullet.getID() + ";" + bullet.getOwner().getID() + ";" + bullet.getCenter().x + ";" + bullet.getCenter().y + ";" + bullet.getAngle() + "\n";
 								}
 								gameStatePacket += "BULLETS_END\n";
+								gameStatePacket += "MAP_BEGIN\n";
+								synchronized (player.removedTiles) {
+									for (Point tile : player.removedTiles) {
+										gameStatePacket += Integer.toString(tile.x) + ";" + Integer.toString(tile.y) + ";" + Integer.toString(Map.getTile(tile.x, tile.y)) + "\n";
+									}
+									player.removedTiles.clear();
+								}
+								gameStatePacket += "MAP_END\n";
 								gameStatePacket += "\n";
 								out.writeBytes(gameStatePacket);
 								out.flush();
 							}
 							else {
-								System.err.println("'" + player.getDescriptor().getName() + "' tried to perform unknown command '" + line + "'.");
+								System.err.println("'" + player.getName() + "' tried to perform unknown command '" + line + "'.");
 							}
 						}
 					} catch (IOException e) {
@@ -506,14 +489,13 @@ public class AICompoGame extends ApplicationAdapter {
 					}
 				}
 			});
-			descriptor.setThread(thread);
+			player.setThread(thread);
 		}
 		
 		try {
 			// Send game state
 			String gameStatePacket = "";
 			gameStatePacket += "MAP_BEGIN\n";
-			gameStatePacket += Integer.toString(Map.WIDTH) + ";" + Integer.toString(Map.HEIGHT) + "\n";
 			for(int y = 0; y < Map.HEIGHT; ++y) {
 				for(int x = 0; x < Map.WIDTH; ++x) {
 					gameStatePacket += Integer.toString(x) + ";" + Integer.toString(y) + ";" + Integer.toString(Map.getTile(x, y)) + "\n";
@@ -523,12 +505,12 @@ public class AICompoGame extends ApplicationAdapter {
 			gameStatePacket += "PLAYERS_BEGIN\n";
 			synchronized(AICompoGame.class) {
 				for(Player player : players) {
-					gameStatePacket += player.getDescriptor().getID() + ";" + player.getDescriptor().getName() + ";" + player.getCenter().x + ";" + player.getCenter().y + ";" + player.getAngle() + "\n";
+					gameStatePacket += player.getID() + ";" + player.getName() + ";" + player.getCenter().x + ";" + player.getCenter().y + ";" + player.getAngle() + ";" + (player.getStatus() == Player.Status.ALIVE) + "\n";
 				}
 				gameStatePacket += "PLAYERS_END\n";
 
 				for(Player player : players) {
-					new DataOutputStream(player.getDescriptor().getSocket().getOutputStream()).writeBytes(gameStatePacket);
+					new DataOutputStream(player.getSocket().getOutputStream()).writeBytes(gameStatePacket);
 				}
 
 			}
@@ -541,26 +523,26 @@ public class AICompoGame extends ApplicationAdapter {
 		suddenDeath = false;
 	}
 
-	private SpawnPoint getSpawnPoint() {
+	private Point getSpawnPoint() {
 		int i = 1;
 		do {
-			ArrayList<SpawnPoint> spawnPoints = new ArrayList<SpawnPoint>();
+			ArrayList<Point> spawnPoints = new ArrayList<Point>();
 			for(int x = i; x < Map.WIDTH - i; ++x) {
 				for(int y = i; y < Map.HEIGHT - i; ++y) {
 					if(Map.isTile(x, y)) continue;
 					if(x == i || y == i || x == Map.WIDTH - i - 1 || y == Map.HEIGHT - i - 1) {
-						spawnPoints.add(new SpawnPoint(x, y));
+						spawnPoints.add(new Point(x, y));
 					}
 				}
 			}
 			
 			while(!spawnPoints.isEmpty()) {
 				int idx = random.nextInt(spawnPoints.size());
-				SpawnPoint spawnPoint = spawnPoints.get(idx);
+				Point spawnPoint = spawnPoints.get(idx);
 				spawnPoints.remove(idx);
 				
 				boolean tooClose = false;
-				for(Player player : players) {
+				for(Player player : playersAlive) {
 					int px = (int) (player.getCenter().x / Map.TILE_SIZEF), py = (int) (player.getCenter().y / Map.TILE_SIZEF);
 					if(Math.abs(px - spawnPoint.x) <= 5 - i && Math.abs(py - spawnPoint.y) <= 5 - i) {
 						tooClose = true;

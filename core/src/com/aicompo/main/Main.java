@@ -58,8 +58,6 @@ public class Main implements Runnable {
 							// id;name;x;y;angle
 							// until PLAYERS_END is received.
 
-							ArrayList<Integer> ids = new ArrayList<Integer>();
-
 							// Parse otherPlayers
 							String playerDataString;
 							while(!(playerDataString = bufferedReader.readLine()).equals("PLAYERS_END")) {
@@ -87,24 +85,7 @@ public class Main implements Runnable {
 								}
 
 								// Update player values
-								playerMap.get(playerID).updateValues(playerData[1], new Vector2(Float.parseFloat(playerData[2]), Float.parseFloat(playerData[3])), Float.parseFloat(playerData[4]));
-
-								// Store id
-								ids.add(playerID);
-							}
-
-							// Remove players
-							if(!ids.contains(this.playerID)) {
-								playerMap.remove(this.playerID);
-								ai.player = null;
-							}
-
-							for(int i = ai.otherPlayers.size() - 1; i >= 0; i--) {
-								int playerID = ai.otherPlayers.get(i).getID();
-								if(!ids.contains(playerID)) {
-									playerMap.remove(playerID);
-									ai.otherPlayers.remove(i);
-								}
+								playerMap.get(playerID).updateValues(playerData[1], new Vector2(Float.parseFloat(playerData[2]), Float.parseFloat(playerData[3])), Float.parseFloat(playerData[4]), Boolean.parseBoolean(playerData[5]));
 							}
 						}
 						else if(line.equals("BULLETS_BEGIN")) {
@@ -155,29 +136,28 @@ public class Main implements Runnable {
 						else if(line.equals("MAP_BEGIN")) {
 							// Input: MAP_BEGIN
 							// This is where we parse the map.
-							// First the size of the map is send in the given format:
-							// width;height
-							// Then the tiles of the map are sent in the given format:
+							// The data are send in the format:
 							// x;y;tile
 							// until MAP_END is received.
 
-							// Initialize map
-							String[] mapSizeData = bufferedReader.readLine().split(";");
-							com.aicompo.ai.Map.initialize(Integer.parseInt(mapSizeData[0]), Integer.parseInt(mapSizeData[1]));
+							boolean changed = false;
 
 							// Parse map
 							String mapDataString;
 							while(!(mapDataString = bufferedReader.readLine()).equals("MAP_END")) {
 								String[] tileData = mapDataString.split(";");
 								Map.setTile(Integer.parseInt(tileData[0]), Integer.parseInt(tileData[1]), Integer.parseInt(tileData[2]));
+								changed = true;
 							}
 
-							ai.mapReceived();
+							if(changed) {
+								ai.mapChanged();
+							}
 						}
 					}
 
 					ai.outputStream = new DataOutputStream(socket.getOutputStream());
-					if(playerMap.containsKey(playerID)) {
+					if(ai.player.isAlive()) {
 						ai.update();
 					}
 

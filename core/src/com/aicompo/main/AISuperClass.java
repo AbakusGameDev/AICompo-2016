@@ -54,6 +54,6 @@ public abstract class AISuperClass {
         }
     }
 
-    public abstract void mapReceived();
+    public abstract void mapChanged();
     public abstract void update();
 }

@@ -1,8 +1,9 @@
 package com.aicompo.game;
 
+import java.awt.*;
+import java.net.Socket;
 import java.util.ArrayList;
 
-import com.aicompo.game.PlayerDescriptor.Status;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.Texture.TextureFilter;
@@ -14,69 +15,83 @@ import com.badlogic.gdx.math.Matrix3;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
-public class Player extends Entity {
-	
-	private final PlayerDescriptor descriptor;
+public class Player {
+	enum Status {
+		READY("READY"),
+		ALIVE("ALIVE"),
+		DEAD("DEAD");
+
+		private String str;
+		private Status(String str) {
+			this.str = str;
+		}
+		public String toString() {
+			return str;
+		}
+	}
+
+	private static int idCounter = 0;
+
+	private final int id;
+	private final Socket socket;
+
+	private String name;
+	private Thread thread;
+	private Status status;
+	public long previousPacketTime;
+
 	private Vector2 position;
 	private Vector2 size;
 	private float angle;
 	private Sprite sprite;
 	private float turnSpeed;
 	private float moveSpeed;
-	private BitmapFont font;
 	private float shootCooldown;
 	private ArrayList<Bullet> bullets;
 	private float moveScale;
 	private float turnScale;
 	private boolean shooting;
+
+	public ArrayList<Point> removedTiles;
 	
-	public PlayerDescriptor getDescriptor() {
-		return descriptor;
-	}
-	
-	public Vector2 getCenter() {
-		return new Vector2(position).add(new Vector2(size).scl(0.5f));
-	}
-	
-	public float getAngle() {
-		return angle;
-	}
-	
-	public Player(PlayerDescriptor descriptor, BitmapFont font, int spriteIndex, ArrayList<Bullet> bullets, int x, int y, float initAngle) {
-		this.descriptor = descriptor;
+	public Player(Socket socket, String name, ArrayList<Bullet> bullets) {
+		// Persisten player data
+		this.id = idCounter;
+		this.name = name;
+		this.socket = socket;
+
+		this.status = Status.READY;
+		this.previousPacketTime = 0;
+
 		this.bullets = bullets;
-		this.font = font;
-		sprite = new Sprite(new Texture("tank_" + spriteIndex + ".png"));
+		removedTiles = new ArrayList<>();
+
+		sprite = new Sprite(new Texture("tank_" + (1 + (idCounter % 6)) + ".png"));
 		sprite.getTexture().setFilter(TextureFilter.Linear, TextureFilter.Linear);
 		sprite.setSize(48.0f, 48.0f);
 		sprite.setOrigin(48.0f / 2, 48.0f / 2);
-		position = new Vector2(x * Map.TILE_SIZE, y * Map.TILE_SIZE);
 		size = new Vector2(31.0f, 31.0f);
 		turnSpeed = 3.0f;
 		moveSpeed = 2.0f;
-		angle = initAngle;
 		shootCooldown = 0.0f;
 		moveScale = 0.0f;
 		turnScale = 0.0f;
 		shooting = false;
 
-		descriptor.setStatus(Status.ALIVE);
-		AICompoGame.addPlayer(this);
+		idCounter++;
 	}
-	
-	@Override
-	public void destroy() {
-		descriptor.setStatus(Status.DEAD);
-		AICompoGame.removePlayer(this);
-		super.destroy();
+
+	public void spawn(int x, int y, float initAngle) {
+		position = new Vector2(x * Map.TILE_SIZE, y * Map.TILE_SIZE);
+		angle = initAngle;
+		status = Status.ALIVE;
 	}
-	
-	@Override
+
 	public void update() {
 		Vector2 velocity = new Vector2(MathUtils.cosDeg(angle), MathUtils.sinDeg(angle)).scl(moveSpeed * moveScale);
 		angle += turnSpeed * turnScale;
 		if(shooting && shootCooldown <= 0.0f) {
-			new Bullet(descriptor, getCenter().add(new Vector2(MathUtils.cosDeg(angle), MathUtils.sinDeg(angle)).scl(16.0f)), angle);
+			bullets.add(new Bullet(this, getCenter().add(new Vector2(MathUtils.cosDeg(angle), MathUtils.sinDeg(angle)).scl(16.0f)), angle));
 			shootCooldown = 1.0f;
 		}
 		shooting = false;
@@ -130,13 +145,13 @@ public class Player extends Entity {
 		}
 		
 		for(Bullet bullet : bullets) {
-			if(bullet.getOwner() != descriptor) {
+			if(bullet.getOwner() != this) {
 				Vector2 point = bullet.getCenter().sub(getCenter());
 				Matrix3 mat = new Matrix3();
 				mat.rotate(angle);
 				point.mul(mat);
 				if((new Rectangle(-size.x / 2, -size.y/ 2, size.x, size.y)).contains(point)) {
-					destroy();
+					status = Status.DEAD;
 					bullet.destroy();
 					break;
 				}
@@ -146,12 +161,11 @@ public class Player extends Entity {
 		shootCooldown -= Gdx.graphics.getDeltaTime();
 	}
 
-	@Override
-	public void draw(SpriteBatch batch) {
+	public void draw(SpriteBatch batch, BitmapFont font) {
 		sprite.setRotation(angle);
 		sprite.setPosition(position.x + (size.x - sprite.getWidth()) / 2, position.y + (size.y - sprite.getHeight()) / 2);
 		sprite.draw(batch);
-		font.draw(batch, descriptor.getName(), getCenter().x - font.getBounds(descriptor.getName()).width / 2, position.y - 20);
+		font.draw(batch, name, getCenter().x - font.getBounds(name).width / 2, position.y - 20);
 	}
 	
 	public void shoot() {
@@ -164,5 +178,41 @@ public class Player extends Entity {
 
 	public void setTurnScale(float scl) {
 		turnScale = scl;
+	}
+
+	public int getID() {
+		return id;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public Socket getSocket() {
+		return socket;
+	}
+
+	public Status getStatus() {
+		return status;
+	}
+
+	public void setThread(Thread thread) {
+		this.thread = thread;
+	}
+
+	public Thread getThread() {
+		return thread;
+	}
+
+	public Vector2 getCenter() {
+		return new Vector2(position).add(new Vector2(size).scl(0.5f));
+	}
+
+	public float getAngle() {
+		return angle;
 	}
 }

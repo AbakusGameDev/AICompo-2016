@@ -44,7 +44,7 @@ public class AI extends AISuperClass {
 
         // Set a random target every second
         if (target == null || (System.currentTimeMillis() - prevTargetTime) > 1000) {
-            target = new Vector2(random.nextFloat() * Map.getWidth() * Map.TILE_SIZEF, random.nextFloat() * Map.getHeight() * Map.TILE_SIZEF);
+            target = new Vector2(random.nextFloat() * Map.WIDTH * Map.TILE_SIZEF, random.nextFloat() * Map.HEIGHT * Map.TILE_SIZEF);
             prevTargetTime = System.currentTimeMillis();
         }
 
@@ -63,11 +63,9 @@ public class AI extends AISuperClass {
         // Move forwards and shoot
         send(Action.SHOOT);
         send(Action.MOVE_FORWARDS);
-
-        System.out.println(""+bullets.size());
     }
 
-    public void mapReceived() {
-
+    public void mapChanged() {
+        // This function is called whenever the map changes
     }
 }

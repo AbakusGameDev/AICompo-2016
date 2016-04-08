@@ -7,15 +7,17 @@ public class Player {
 	private String name;
 	private Vector2 position;
 	private float angle;
+	private boolean alive;
 
 	public Player(int id) {
 		this.id = id;
 	}
 
-	public void updateValues(String name, Vector2 position, float angle) {
+	public void updateValues(String name, Vector2 position, float angle, boolean alive) {
 		this.name = name;
 		this.position = position;
 		this.angle = angle;
+		this.alive = alive;
 	}
 	
 	public int getID() {
@@ -24,6 +26,10 @@ public class Player {
 	
 	public String getName() {
 		return name;
+	}
+
+	public boolean isAlive() {
+		return alive;
 	}
 	
 	public Vector2 getPosition() {
