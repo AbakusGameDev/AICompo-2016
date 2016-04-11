@@ -8,9 +8,9 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.Random;
 
-// This AI selects a random point on the map, moves towards it
-// for 1 second before choosing a new point while shooting.
+// This AI selects a random point on the map, moves towards it for 1 second before choosing a new point while shooting
 public class AI extends AISuperClass {
+    // This is the initial name for your tank when the match starts
     public static final String PLAYER_NAME = "AI";
 
     // Variables for this AI
@@ -18,8 +18,11 @@ public class AI extends AISuperClass {
     private Vector2 target;
     private long prevTargetTime;
 
-    public AI() {
-        // Called at the start of a match
+    @Override
+    public void init() {
+        // Called when the countdown for a new match begins
+        // At this point the players and the map have been received
+
         // Initialize variables
         random = new Random();
         target = null;
@@ -28,16 +31,16 @@ public class AI extends AISuperClass {
 
     @Override
     public void update() {
-        // To perform an action use the send() function
-        // with one of the following values:
+        // To perform an action use the send() function with one of the following values:
         // TURN_LEFT - Turn your tank left
         // TURN_RIGHT - Turn your tank right
-        // STOP_TURN - Stop your tank turning
+        // STOP_TURN - Stop your tank from turning
+        // TURN_TOWARDS - Turns your tank towards a given angle. (Example: send(TURN_TOWARDS, 90.0) to make your tank approach a 90-degree angle)
         // MOVE_FORWARDS - Move your tank forwards
         // MOVE_BACKWARDS - Move your tank backwards
-        // STOP_MOVE - Stop your tank moving
+        // STOP_MOVE - Stop your tank from moving
         // SHOOT - Shoot a bullet (has a 1 second cooldown)
-        // You can also use setName to change your name
+        // CHANGE_NAME - Changes your name. (Example: send(CHANGE_NAME, "name") to change your name to "name")
 
         // You can find other players with the otherPlayers ArrayList
         // Example (will loop through all other players):
@@ -45,9 +48,22 @@ public class AI extends AISuperClass {
         //      // Code there
         // }
 
+        // You can find (all) bullets with the bullets ArrayList
+        // Example (will loop through all bullets):
+        // for(Bullet bullet : bullets) {
+        //      // Code there
+        //      if(bullet.getOwner() == player) {
+        //          // Your bullet
+        //      }
+        //      else {
+        //          // Not your bullet
+        //      }
+        // }
+
         // Set a random target every second
         if (target == null || (System.currentTimeMillis() - prevTargetTime) > 1000) {
-            target = new Vector2(random.nextFloat() * Map.WIDTH * Map.TILE_SIZEF, random.nextFloat() * Map.HEIGHT * Map.TILE_SIZEF);
+            // random.nextInt returns a value from 0 to the given number. Map.TILE_SIZE is the size of a tile (in pixels). Map.WIDTH and Map.HEIGHT is given in # tiles
+            target = new Vector2(random.nextInt(Map.WIDTH * Map.TILE_SIZE), random.nextInt(Map.HEIGHT * Map.TILE_SIZE));
             prevTargetTime = System.currentTimeMillis();
         }
 
@@ -56,30 +72,30 @@ public class AI extends AISuperClass {
         Vector2 playerDirection = new Vector2(MathUtils.cosDeg(player.getAngle()), MathUtils.sinDeg(player.getAngle()));
         float cross = playerToTarget.crs(playerDirection);
 
-        // Rotate towards it
+        // Rotate towards the target position
         if (cross < 0.0f) {
             send(TURN_RIGHT);
         } else if (cross > 0.0f) {
             send(TURN_LEFT);
         }
 
+        // Alternate method. More precise and avoids jittering
+        //send(TURN_TOWARDS, playerToTarget.angle());
+
         // Move forwards and shoot
-        send(SHOOT);
         send(MOVE_FORWARDS);
+        send(SHOOT);
     }
 
     @Override
-    public void matchStarted() {
-        // Called after the map and players have been received the first time
+    public void tileRemoved(int x, int y) {
+        // When the time has run out, tiles will be removed every 2 seconds to avoid long games
+        // This function is automatically called whenever a tile is removed
+        // x and y is the position of the tile removed
     }
 
     @Override
     public void matchEnded() {
-        // Called after when the match has ended
-    }
-
-    @Override
-    public void mapModified() {
-        // This function is called whenever the map modified
+        // Called when the match has ended
     }
 }

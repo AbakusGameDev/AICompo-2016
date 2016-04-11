@@ -7,6 +7,9 @@ public class Bullet {
 	private Player owner;
 	private Vector2 position;
 	private float angle;
+
+	public final static float SPEED = 10.0f; // pixels / sec
+	public final static float SIZE = 1.0f; // A point
 	
 	public Bullet(int id, Player owner) {
 		this.id = id;

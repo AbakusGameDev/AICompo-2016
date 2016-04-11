@@ -52,6 +52,8 @@ public class Player {
 	private float turnScale;
 	private boolean shooting;
 
+	private float desiredAngle;
+
 	public ArrayList<Point> removedTiles;
 	
 	public Player(Socket socket, String name, ArrayList<Bullet> bullets) {
@@ -89,7 +91,13 @@ public class Player {
 
 	public void update() {
 		Vector2 velocity = new Vector2(MathUtils.cosDeg(angle), MathUtils.sinDeg(angle)).scl(moveSpeed * moveScale);
-		angle += turnSpeed * turnScale;
+		if(turnScale == -2.0f) {
+			float angleDiff = ((((desiredAngle - angle) % 360) + 540) % 360) - 180;
+			angle += Math.max(-turnSpeed, Math.min(angleDiff, turnSpeed));
+		}
+		else {
+			angle += turnSpeed * turnScale;
+		}
 		if(shooting && shootCooldown <= 0.0f) {
 			bullets.add(new Bullet(this, getCenter().add(new Vector2(MathUtils.cosDeg(angle), MathUtils.sinDeg(angle)).scl(16.0f)), angle));
 			shootCooldown = 1.0f;
@@ -190,6 +198,11 @@ public class Player {
 
 	public void setName(String name) {
 		this.name = name;
+	}
+
+	public void setDesiredAngle(float angle) {
+		this.desiredAngle = angle;
+		this.turnScale = -2.0f;
 	}
 
 	public Socket getSocket() {

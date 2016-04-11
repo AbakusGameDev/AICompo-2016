@@ -1,4 +1,4 @@
-package com.aicompo.game.desktop;
+package com.aicompo.game;
 
 import com.badlogic.gdx.backends.lwjgl.LwjglApplication;
 import com.badlogic.gdx.backends.lwjgl.LwjglApplicationConfiguration;

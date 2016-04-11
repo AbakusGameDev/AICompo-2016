@@ -445,8 +445,11 @@ public class AICompoGame extends ApplicationAdapter {
 								else if(id == AISuperClass.SHOOT) {
 									player.shoot();
 								}
-								else if(id == AISuperClass.NAME) {
+								else if(id == AISuperClass.CHANGE_NAME) {
 									player.setName(bufferedReader.readLine());
+								}
+								else if(id == AISuperClass.TURN_TOWARDS) {
+									player.setDesiredAngle(Float.parseFloat(bufferedReader.readLine()));
 								}
 								else {
 									System.err.println("'" + player.getName() + "' tried to perform unknown command '" + id + "'.");

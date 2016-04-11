@@ -58,7 +58,7 @@ public class AIMain implements Runnable {
 							bulletMap.clear();
 						}
 						else if(line.equals("START")) {
-							ai.matchStarted();
+							ai.init();
 						}
 						else if(line.equals("END")) {
 							ai.matchEnded();
@@ -154,12 +154,15 @@ public class AIMain implements Runnable {
 
 							// Parse map
 							String mapDataString;
+							int x = 0, y = 0;
 							while(!(mapDataString = bufferedReader.readLine()).equals("MAP_MODIFIED_END")) {
 								String[] tileData = mapDataString.split(";");
-								Map.setTile(Integer.parseInt(tileData[0]), Integer.parseInt(tileData[1]), Integer.parseInt(tileData[2]));
+								x = Integer.parseInt(tileData[0]);
+								y = Integer.parseInt(tileData[1]);
+								Map.setTile(x, y, Integer.parseInt(tileData[2]));
 							}
 
-							ai.mapModified();
+							ai.tileRemoved(x, y);
 						}
 						else if(line.equals("MAP_BEGIN")) {
 							// Input: MAP_BEGIN
