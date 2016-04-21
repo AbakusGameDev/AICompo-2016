@@ -11,7 +11,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 
 public class ControlledPlayer implements Runnable {
-	private static final String PLAYER_NAME = "Controlled player";
+	private static final String PLAYER_NAME = "CONTROLLED PLAYER";
 
 	@Override
 	public void run() {
@@ -25,43 +25,37 @@ public class ControlledPlayer implements Runnable {
 				// Do stuff while we're connected
 				BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 				while(socket.isConnected()) {
-
-					while(!bufferedReader.readLine().isEmpty());
-
-					DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-
-					// Player movement (WASD / cursor keys)
-					if(Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) {
-						out.writeBytes(AISuperClass.MOVE_FORWARDS + "\n");
-					}
-					else if(Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
-						out.writeBytes(AISuperClass.MOVE_BACKWARDS + "\n");
-					}
-					else {
-						out.writeBytes(AISuperClass.STOP_MOVE + "\n");
-					}
-
-					if(Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
-						out.writeBytes(AISuperClass.TURN_RIGHT + "\n");
-					}
-					else if(Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
-						out.writeBytes(AISuperClass.TURN_LEFT + "\n");
-					}
-					else {
-						out.writeBytes(AISuperClass.STOP_TURN + "\n");
-					}
-
-					if(Gdx.input.isKeyPressed(Input.Keys.SPACE)) {
-						out.writeBytes(AISuperClass.SHOOT + "\n");
-					}
-
-					// End turn
-					out.writeBytes("\n");
-
-					try {
-						Thread.sleep(16);
-					} catch (InterruptedException ex) {
-						Thread.currentThread().interrupt();
+					String line = bufferedReader.readLine();
+					if(line.isEmpty()) {
+						DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+						
+						// Player movement (WASD / cursor keys)
+						if(Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) {
+							out.writeBytes("MOVE_FORWARDS\n");
+						}
+						else if(Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
+							out.writeBytes("MOVE_BACKWARDS\n");
+						}
+						else {
+							out.writeBytes("STOP_MOVE\n");
+						}
+						
+						if(Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
+							out.writeBytes("TURN_RIGHT\n");
+						}
+						else if(Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
+							out.writeBytes("TURN_LEFT\n");
+						}
+						else {
+							out.writeBytes("STOP_TURN\n");
+						}
+						
+						if(Gdx.input.isKeyPressed(Input.Keys.SPACE)) {
+							out.writeBytes("SHOOT\n");
+						}
+						
+						// End turn
+						out.writeBytes("\n");
 					}
 				}
 			}

@@ -1,39 +1,71 @@
 To run the game:
 
-1) Import 'AICompo/core' into your preferred java IDE
-2) Run com.aicompo.game.DesktopLauncher.java
+1) Import 'AICompo-desktop' and 'AICompo-core' into your preferred java IDE
+2) Run com.aicompo.game.desktop.DesktopLauncher.java
 
 Adding your AI to the game:
 
-When <1> is pressed in the waiting menu, the game will add an AI player.
+When CTRL + 1 is pressed in the waiting menu, the game will add an DemoAIPlayer.
 This class is documented and can be modified.
-It is found in com.aicompo.ai alongside other example code.
+It is found in com.aicompo.example alongside other example code.
+The main function to look at is 'public void run()', and 
+your AI code should go where it says 'YOUR AI CODE HERE'
 
-To perform an action use the send() function with one of the following values:
+How to connect:
 
-TURN_LEFT - Turn your tank left
-TURN_RIGHT - Turn your tank right
-STOP_TURN - Stop your tank from turning
-TURN_TOWARDS - Turns your tank towards a given angle. (Example: send(TURN_TOWARDS, 90.0) to make your tank approach a 90-degree angle)
+Open a TCP socket and connect to the host using port 45556.
+Your player ID will be sent right after you've connected.
+
+Receiving the map:
+
+MAP_BEGIN - Indicates the start of map stream
+width;height - The height and width of the map. This is only sent once.
+x;y;collision - Position and the type of the tile (0 = empty, 1 = occupied). This is repeatedly sent until the entire map is sent.
+MAP_END - Indicates the end of map stream
+
+Receiving the game state:
+
+PLAYERS_BEGIN - Indicates the start of players stream
+id;name;x;y;degrees - The parameters of the player. x and y is the center of the player, and degrees is the direction of which the player is facing (in degrees). This is repeatedly sent until all players are processed.
+PLAYERS_END - Indicates the end of players stream
+
+BULLETS_BEGIN - Indicates the start of the bullets stream
+id;ownerid;x;y;degrees - The parameters of the bullets. x and y is the center of the bullet, and degrees is the direction of which the bullet is heading (in degrees). This is repeatedly sent until all bullets are processed.
+BULLETS_END - Indicates the end of the bullets stream
+
+When restarting:
+
+RESTART - Indicates the game is about to restart
+
+Available tank moves:
+
+NAME newName - Changes your name (in this exmple to 'newName')
+TURN_LEFT - Turns your tank left
+TURN_RIGHT - Turns your tank right
+STOP_TURN - Stop your tank turning
 MOVE_FORWARDS - Move your tank forwards
 MOVE_BACKWARDS - Move your tank backwards
-STOP_MOVE - Stop your tank from moving
-SHOOT - Shoot a bullet (has a 1 second cooldown)
-CHANGE_NAME - Changes your name. (Example: send(CHANGE_NAME, "name") to change your name to "name")
+STOP_MOVE - Stop your tank moving
+SHOOT - Shoot (has a 1 second cooldown)
 
+Dimensions and velocities of stuff:
 
-Constants:
-Player.SIZE - In pixels
-Player.MOVEMENT_SPEED - In pixels per second
-Player.ROTATION_SPEED - In degrees per frame (60 frames per sec)
-Bullet.SPEED - In pixels per second
-Bullet.SIZE - In pixels (a point)
-Map.TILE_SIZE - A size of a tile in pixels
-Map.WIDTH - The width of the map in tiles
-Map.HEIGHT - The height of the map in tiles
+Player collision box: 32x32
+Player movement speed: 2 pixels per frame
+Player turning speed: 3 degrees per frame
+Bullet collision box: 1x1 (a single point)
+Bullet speed: 10 pixels per frame
+Tile/block size: 40x40
+
+Player collision box:
 
 Note:
 
-Your AI cannot have a compute time greater than 3 seconds.
+All commands should end with a newline (\n)!
+To receive the game state, you have to send an empty line ("\n"). If this empty newline is not sent once every 3 seconds, you will be disconnected.
+Incidentally, this means that your AI cannot have a compute time greater than 3 seconds.
+An empty line received from the server indicates it has finished sending the game state.
+The game uses the libgdx game framework, so any questions regarding their API can be found in their documentation: http://libgdx.badlogicgames.com/nightlies/docs/api/
 
-Made by Marcus Loo Vergara for Abakus GameDev, 2015-2016.
+Made by Marcus Loo Vergara for Abakus GameDev, 2015.
+Neste gang blir dokumentasjonen på norsk :P
