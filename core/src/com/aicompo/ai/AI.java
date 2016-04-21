@@ -17,6 +17,7 @@ public class AI extends AISuperClass {
     private Random random;
     private Vector2 target;
     private long prevTargetTime;
+    private AStar astar;
 
     @Override
     public void init() {
@@ -27,6 +28,7 @@ public class AI extends AISuperClass {
         random = new Random();
         target = null;
         prevTargetTime = 0;
+        astar = new AStar();
     }
 
     @Override
@@ -63,8 +65,12 @@ public class AI extends AISuperClass {
         // Set a random target every second
         if (target == null || (System.currentTimeMillis() - prevTargetTime) > 1000) {
             // random.nextInt returns a value from 0 to the given number. Map.TILE_SIZE is the size of a tile (in pixels). Map.WIDTH and Map.HEIGHT is given in # tiles
-            target = new Vector2(random.nextInt(Map.WIDTH * Map.TILE_SIZE), random.nextInt(Map.HEIGHT * Map.TILE_SIZE));
-            prevTargetTime = System.currentTimeMillis();
+            ArrayList<Point> path = astar.getPath(player.getPosition(), otherPlayers.get(0).getPosition());
+
+            if(!path.isEmpty()) {
+                target = new Vector2((path.get(0).x+0.5f) * Map.TILE_SIZEF, (path.get(0).y+0.5f) * Map.TILE_SIZEF);//new Vector2(random.nextInt(Map.WIDTH * Map.TILE_SIZE), random.nextInt(Map.HEIGHT * Map.TILE_SIZE));
+                prevTargetTime = System.currentTimeMillis();
+            }
         }
 
         // Calculate cross product

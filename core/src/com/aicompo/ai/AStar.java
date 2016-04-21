@@ -1,28 +1,34 @@
 package com.aicompo.ai;
 
+import com.badlogic.gdx.math.Vector2;
+
 import java.awt.*;
 import java.util.ArrayList;
 
-class Node {
-    Node(int x, int y) {
-        this.x = x;
-        this.y = y;
+public class AStar {
+    class Node {
+        Node(int x, int y) {
+            this.x = x;
+            this.y = y;
+        }
+
+        final public int x, y;
+
+        public float f;
+        public float g;
+        public float h;
+
+        public Node parent;
     }
 
-    final public int x, y;
+    public ArrayList<Point> getPath(Vector2 start, Vector2 end) {
+        return getPath(new Point((int)(start.x / Map.TILE_SIZEF), (int)(start.y / Map.TILE_SIZEF)), new Point((int)(end.x / Map.TILE_SIZEF), (int)(end.y / Map.TILE_SIZEF)));
+    }
 
-    public float f;
-    public float g;
-    public float h;
-
-    public Node parent;
-}
-
-public class AStar {
-    public ArrayList<Node> getPath(Point start, Point end) {
+    public ArrayList<Point> getPath(Point start, Point end) {
         ArrayList<Node> open = new ArrayList<>();
         ArrayList<Node> closed = new ArrayList<>();
-        ArrayList<Node> path = new ArrayList<>();
+        ArrayList<Point> path = new ArrayList<>();
 
         Node[][] nodeGrid = new Node[Map.WIDTH][Map.HEIGHT];
         for(int y = 0; y < Map.HEIGHT; y++) {
@@ -43,7 +49,7 @@ public class AStar {
             // If we've arrived, construct the path
             if(node == endNode) {
                 while(node != startNode) {
-                    path.add(0, node);
+                    path.add(0, new Point(node.x, node.y));
                     node = node.parent;
                 }
                 break;
