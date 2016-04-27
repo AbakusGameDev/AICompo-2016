@@ -1,94 +1,87 @@
 package com.aicompo.ai;
 
-import com.badlogic.gdx.math.Vector2;
-
-import java.awt.*;
 import java.util.ArrayList;
 
 public class AStar {
-    class Node {
-        Node(int x, int y) {
-            this.x = x;
-            this.y = y;
-        }
-
-        final public int x, y;
-
-        public float f;
-        public float g;
-        public float h;
-
-        public Node parent;
-    }
-
-    public ArrayList<Point> getPath(Vector2 start, Vector2 end) {
-        return getPath(new Point((int)(start.x / Map.TILE_SIZEF), (int)(start.y / Map.TILE_SIZEF)), new Point((int)(end.x / Map.TILE_SIZEF), (int)(end.y / Map.TILE_SIZEF)));
-    }
-
-    public ArrayList<Point> getPath(Point start, Point end) {
-        ArrayList<Node> open = new ArrayList<>();
-        ArrayList<Node> closed = new ArrayList<>();
-        ArrayList<Point> path = new ArrayList<>();
-
-        Node[][] nodeGrid = new Node[Map.WIDTH][Map.HEIGHT];
-        for(int y = 0; y < Map.HEIGHT; y++) {
-            for(int x = 0; x < Map.WIDTH; x++) {
-                nodeGrid[x][y] = new Node(x, y);
-            }
-        }
-
-        Node startNode = nodeGrid[start.x][start.y];
-        Node endNode = nodeGrid[end.x][end.y];
-
-        open.add(startNode);
-
-        while(!open.isEmpty()) {
-            // Extract the node with the min f score
-            Node node = extractMin(open);
-
-            // If we've arrived, construct the path
-            if(node == endNode) {
-                while(node != startNode) {
-                    path.add(0, new Point(node.x, node.y));
-                    node = node.parent;
-                }
-                break;
-            }
-
-            Node[] neighbours = new Node[] { nodeGrid[node.x][node.y - 1],  nodeGrid[node.x - 1][node.y], nodeGrid[node.x + 1][node.y], nodeGrid[node.x][node.y + 1]};
-            for(Node neighbourNode : neighbours) {
-                if(!Map.isTile(neighbourNode.x, neighbourNode.y) && !closed.contains(neighbourNode)) {
-                    if(!open.contains(neighbourNode) || node.g + 10 < neighbourNode.g) {
-                        neighbourNode.parent = node;
-                        neighbourNode.g = node.g + 10;
-                        neighbourNode.h = getHeuristic(neighbourNode, endNode);
-                        neighbourNode.f = neighbourNode.g + neighbourNode.f;
-                        if(!open.contains(neighbourNode)) {
-                            open.add(neighbourNode);
-                        }
-                    }
-                }
-            }
-
-            closed.add(node);
-        }
-
-        return path;
-    }
-
-    float getHeuristic(Node start, Node end) {
-        return Math.abs(end.x - start.x) + Math.abs(end.y - start.y);
-    }
-
-    Node extractMin(ArrayList<Node> list) {
+	private Node[][] nodeGrid;
+	
+	public AStar() {
+		nodeGrid = new Node[Map.WIDTH][Map.HEIGHT];
+    	for (int y = 0; y < Map.HEIGHT; y++) {
+    		for (int x = 0; x < Map.WIDTH; x++) {
+    			nodeGrid[x][y] = new Node(x, y);
+    		}
+    	}
+	}
+	
+	private Node extractMin(ArrayList<Node> list) {
         Node lowestNode = list.get(0);
-        for(int i = 1; i < list.size(); i++) {
+        for (int i = 1; i < list.size(); i++) {
             Node node = list.get(i);
-            if(node.f < lowestNode.f) {
+            if (node.F < lowestNode.F) {
                 lowestNode = node;
             }
         }
         list.remove(lowestNode);
         return lowestNode;
+    }
+	
+    public ArrayList<Node> calculatePath(int startX, int startY, int targetX, int targetY) {
+    	ArrayList<Node> open = new ArrayList<Node>(),
+    					closed = new ArrayList<Node>(),
+    					path = new ArrayList<Node>();
+    	
+    	Node startNode = nodeGrid[startX][startY];
+    	Node targetNode = nodeGrid[targetX][targetY];
+    	
+    	open.add(startNode);
+    	
+    	while (open.size() > 0) {
+    		// Finds the node with the lowest cost in the list of open nodes. Breaks if the list is empty.
+    		Node centerNode = extractMin(open);
+    		
+    		// If it's the target node, break. Adds it to the list of closed nodes.
+    		if (centerNode == targetNode) {
+    			Node node = targetNode;
+    			while (node != startNode) {
+    				path.add(0, node);
+    				node = node.parent;
+    			}
+    			break;
+    		}
+    		closed.add(centerNode);
+    		
+    		int x = centerNode.x, y = centerNode.y;
+    		
+    		// Loops through the orthogonal nodes.
+    		Node[] nodesToLoopThrough = new Node[] {nodeGrid[x][y - 1], nodeGrid[x - 1][y], nodeGrid[x + 1][y], nodeGrid[x][y + 1]};
+    		for (Node node : nodesToLoopThrough) {
+    			if (!Map.isTile(node.x, node.y) && !closed.contains(node)) {
+					if (!open.contains(node) || centerNode.G + 10 < node.G) {
+						node.parent = centerNode;
+						node.G = centerNode.G + 10;
+						node.H = (Math.abs(targetX - node.x) + Math.abs(targetY - node.y)) * 10;
+						node.F = node.G + node.H;
+						if (!open.contains(node)) open.add(node);
+					}
+    			}
+    		}
+    		
+    		// Loops through the diagonal nodes.
+    		nodesToLoopThrough = new Node[] {nodeGrid[x - 1][y - 1], nodeGrid[x + 1][y - 1], nodeGrid[x - 1][y + 1], nodeGrid[x + 1][y + 1]};
+    		for (Node node : nodesToLoopThrough) {
+    			if (!Map.isTile(node.x, node.y) && !closed.contains(node) && !Map.isTile(x, node.y) && !Map.isTile(node.x, y)) {
+					if (!open.contains(node) || centerNode.G + 14 < node.G) {
+						node.parent = centerNode;
+						node.G = centerNode.G + 14;
+						node.H = (Math.abs(targetX - node.x) + Math.abs(targetY - node.y)) * 10;
+						node.F = node.G + node.H;
+						if (!open.contains(node)) open.add(node);
+					}
+    			}
+    		}
+    	}
+    	
+    	return path;
     }
 }

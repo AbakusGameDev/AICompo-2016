@@ -81,7 +81,7 @@ public class AICompoGame extends ApplicationAdapter {
 		players = new ArrayList<Player>();
 		playersAlive = new ArrayList<Player>();
 		bullets = new ArrayList<Bullet>();
-		FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("Days.ttf"));
+		FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("assets/Days.ttf"));
 		font = generator.generateFont(18, DEFAULT_CHARS, true);
 		font.setColor(Color.WHITE);
 		font.setUseIntegerPositions(true);
@@ -94,7 +94,7 @@ public class AICompoGame extends ApplicationAdapter {
 		generator.dispose();
 		gameTimer = 0.0f;
 		state = State.WAITING_FOR_PLAYERS;
-		panelSprite = new Sprite(new Texture("panel.png"));
+		panelSprite = new Sprite(new Texture("assets/panel.png"));
 		panelSprite.flip(false, true);
 		panelSprite.setPosition(Map.WIDTH * Map.TILE_SIZE, 0.0f);
 		panelSprite.setSize(280, 720);
@@ -103,10 +103,10 @@ public class AICompoGame extends ApplicationAdapter {
 		mapIndex = 0;
 		mapFiles = Gdx.files.internal("maps/").list();
 		
-		wallSprite = new Sprite(new Texture("wall.png"));
+		wallSprite = new Sprite(new Texture("assets/wall.png"));
 		wallSprite.flip(false, true);
 		wallSprite.setSize(Map.TILE_SIZEF, Map.TILE_SIZEF);
-		floorSprite = new Sprite(new Texture("floor.png"));
+		floorSprite = new Sprite(new Texture("assets/floor.png"));
 		floorSprite.flip(false, true);
 		floorSprite.setSize(Map.TILE_SIZEF, Map.TILE_SIZEF);
 

@@ -68,7 +68,7 @@ public class Player {
 		this.bullets = bullets;
 		removedTiles = new ArrayList<>();
 
-		sprite = new Sprite(new Texture("tank_" + (1 + (idCounter % 6)) + ".png"));
+		sprite = new Sprite(new Texture("assets/tank_" + (1 + (idCounter % 6)) + ".png"));
 		sprite.getTexture().setFilter(TextureFilter.Linear, TextureFilter.Linear);
 		sprite.setSize(48.0f, 48.0f);
 		sprite.setOrigin(48.0f / 2, 48.0f / 2);
