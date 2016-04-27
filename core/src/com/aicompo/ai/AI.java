@@ -4,19 +4,20 @@ import com.aicompo.game.AISuperClass;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 
-import java.awt.*;
 import java.util.ArrayList;
 import java.util.Random;
 
-// This AI selects a random point on the map, moves towards it for 1 second before choosing a new point while shooting
+// This AI selects a random tile on the map, moves to it, and repeats these steps. If the player is facing another player with a clear line of sight, it shoots
 public class AI extends AISuperClass {
     // This is the initial name for your tank when the match starts
     public static final String PLAYER_NAME = "AI";
 
     // Variables for this AI
     private Random random;
-    private Vector2 target;
-    private long prevTargetTime;
+    private ArrayList<Node> path;
+    int pathIndex;
+    AStar pathFinder;
+    LineOfSight lineOfSight;
 
     @Override
     public void init() {
@@ -25,8 +26,10 @@ public class AI extends AISuperClass {
 
         // Initialize variables
         random = new Random();
-        target = null;
-        prevTargetTime = 0;
+        pathFinder = new AStar();
+        lineOfSight = new LineOfSight();
+        path = new ArrayList<Node>();
+        pathIndex = 0;
     }
 
     @Override
@@ -44,53 +47,80 @@ public class AI extends AISuperClass {
 
         // You can find other players with the otherPlayers ArrayList
         // Example (will loop through all other players):
-        // for(Player otherPlayer : otherPlayers) {
+        // for (Player otherPlayer : otherPlayers) {
         //      // Code there
         // }
 
         // You can find (all) bullets with the bullets ArrayList
         // Example (will loop through all bullets):
-        // for(Bullet bullet : bullets) {
+        // for (Bullet bullet : bullets) {
         //      // Code there
-        //      if(bullet.getOwner() == player) {
+        //      if (bullet.getOwner() == player) {
         //          // Your bullet
-        //      }
-        //      else {
+        //      } else {
         //          // Not your bullet
         //      }
         // }
-
-        // Set a random target every second
-        if (target == null || (System.currentTimeMillis() - prevTargetTime) > 1000) {
-            // random.nextInt returns a value from 0 to the given number. Map.TILE_SIZE is the size of a tile (in pixels). Map.WIDTH and Map.HEIGHT is given in # tiles
-            target = new Vector2(random.nextInt(Map.WIDTH * Map.TILE_SIZE), random.nextInt(Map.HEIGHT * Map.TILE_SIZE));
-            prevTargetTime = System.currentTimeMillis();
+    	
+    	// Loop through all other players
+    	for (Player otherPlayer : otherPlayers) {
+    		// Get the vector from your player to the other player and normalize it with .nor() (to make its length equal to 1). Then get the vector for your player's direction
+    		Vector2 targetDirection = new Vector2(otherPlayer.getPosition()).sub(player.getPosition()).nor(),
+        			playerDirection = new Vector2(MathUtils.cosDeg(player.getAngle()), MathUtils.sinDeg(player.getAngle()));
+    		
+    		// Get the dot product between these two vectors. The dot product between two (normalized) vectors is equal to cosine of the angle between them: a • b = cos(angle between a and b)
+    		// The dot product will be 0 if the vectors are perpendicular and 1 if they are equal. So the more they are facing the same direction, the closer the value will be to 1
+    		// If the dot product is greater than cos(10), it means the angle between the vectors is less than 10 degrees and that your player is facing the other player
+    		float dot = targetDirection.dot(playerDirection);
+    		if (dot > MathUtils.cosDeg(10)) {
+    			// Shoot if there's an open line between your player's position and the other player's position
+    			if (lineOfSight.check(player.getPosition(), otherPlayer.getPosition())) {
+    				send(SHOOT);
+    			}
+    		}
+    	}
+        
+        // Calculate path towards a random tile
+        if (pathIndex == path.size()) {
+        	// Find a random empty tile. random.nextInt(v) returns a value from 0 to v. Map.WIDTH and Map.HEIGHT is given in number of tiles
+        	int x = 0, y = 0;
+        	while (Map.isTile(x, y)) {x = random.nextInt(Map.WIDTH); y = random.nextInt(Map.HEIGHT);}
+        	
+        	// Calculate the path from the tank to the empty tile. Math.floor(x / Map.TILE_SIZEF) converts x from pixel coordinates to tile coordinates 
+        	path = pathFinder.calculatePath(
+        		(int) Math.floor(player.getPosition().x / Map.TILE_SIZEF),
+        		(int) Math.floor(player.getPosition().y / Map.TILE_SIZEF),
+        		x, y
+        	);
+        	
+        	// pathIndex indicates the node our tank will approach in the path list
+        	pathIndex = 0;
         }
-
-        // Calculate cross product
-        Vector2 playerToTarget = new Vector2(target).sub(player.getPosition());
-        Vector2 playerDirection = new Vector2(MathUtils.cosDeg(player.getAngle()), MathUtils.sinDeg(player.getAngle()));
-        float cross = playerToTarget.crs(playerDirection);
-
-        // Rotate towards the target position
-        if (cross < 0.0f) {
-            send(TURN_RIGHT);
-        } else if (cross > 0.0f) {
-            send(TURN_LEFT);
-        }
-
-        // Alternate method. More precise and avoids jittering
-        //send(TURN_TOWARDS, playerToTarget.angle());
-
-        // Move forwards and shoot
-        send(MOVE_FORWARDS);
-        send(SHOOT);
+    	
+        // If the player has not reached the end of the path, keep moving
+    	if (pathIndex < path.size()) {
+    		// Get the position of the node our tank is currently approaching, and convert it from tile coordinates to pixel coordinates
+    		Vector2 target = new Vector2((path.get(pathIndex).x + 0.5f) * Map.TILE_SIZEF, (path.get(pathIndex).y + 0.5f) * Map.TILE_SIZEF);
+    		
+    		Vector2 targetDirection = new Vector2(target).sub(player.getPosition()).nor(),
+        			playerDirection = new Vector2(MathUtils.cosDeg(player.getAngle()), MathUtils.sinDeg(player.getAngle()));
+    		
+    		// If the angle between the target direction and the player direction is less than 60 degrees, move forwards, otherwise stop moving forward to avoid moving too far off the path
+    		float dot = targetDirection.dot(playerDirection);
+        	if (dot > MathUtils.cosDeg(60)) send(MOVE_FORWARDS); else send(STOP_MOVE);
+        	
+        	// Turn towards the target
+        	send(TURN_TOWARDS, targetDirection.angle());
+    		
+        	// If the distance (.dst()) between the player and the target is small enough, start approaching the next node in the path
+    		if (player.getPosition().dst(target) < Map.TILE_SIZEF * 0.5) ++pathIndex;
+    	}
     }
 
     @Override
     public void tileRemoved(int x, int y) {
         // When the time has run out, tiles will be removed every 2 seconds to avoid long games
-        // This function is automatically called whenever a tile is removed
+        // This method is automatically called whenever a tile is removed
         // x and y is the position of the tile removed
     }
 

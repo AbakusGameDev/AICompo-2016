@@ -42,7 +42,7 @@ public class Bullet {
 		this.destroyed = false;
 		
 		velocity = new Vector2(MathUtils.cosDeg(angle), MathUtils.sinDeg(angle)).nor().scl(10.0f);
-		sprite = new Sprite(new Texture("bullet.png"));
+		sprite = new Sprite(new Texture("assets/bullet.png"));
 		sprite.getTexture().setFilter(TextureFilter.Linear, TextureFilter.Linear);
 		sprite.setSize(8, 8);
 		sprite.setOrigin(4, 4);
