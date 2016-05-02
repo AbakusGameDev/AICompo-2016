@@ -174,7 +174,7 @@ public class AICompoGame extends ApplicationAdapter {
 			
 		case GAME_RUNNING:
 			// Check for restart
-			if(Gdx.input.isKeyPressed(Input.Keys.R) && (Gdx.input.isKeyPressed(Input.Keys.CONTROL_RIGHT) || Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT))) {
+			if(Gdx.input.isKeyPressed(Input.Keys.ESCAPE)) {
 				state = State.GAME_DONE;
 			}
 
@@ -309,6 +309,7 @@ public class AICompoGame extends ApplicationAdapter {
 				i++;
 				fontPanel.draw(batch, "Players remaining: " + playersAlive.size(), 740, 42 + 20 * i++);
 				fontPanel.draw(batch, "Time remaining: " + (state == State.GAME_RUNNING ? (suddenDeath ? "Sudden death" : (int) gameTimer + " seconds") : ((int) GAME_TIME)), 740, 42 + 20 * i++);
+				fontPanel.draw(batch, "Press <ESC> to end the match", 740, 700);
 			}
 		}
 		
