@@ -3,7 +3,6 @@ package com.aicompo.ai;
 import com.aicompo.game.AISuperClass;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.utils.Array;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -22,8 +21,8 @@ public class AI extends AISuperClass {
     AStar pathFinder;
     LineOfSight lineOfSight;
     long lastTickTime;
-    long sampleDataTimer;
     long updatePathTimer;
+    long sampleDataTimer;
     Player targetPlayer;
 
     class PlayerMetaData {
@@ -36,8 +35,6 @@ public class AI extends AISuperClass {
                 distance =  prevData.position.cpy().sub(position).len();
                 speed = (1000.0f * distance) / (time - prevData.time);
                 velocity = direction.cpy().scl(speed);
-
-                System.out.println("Dt: "+(time-prevData.time));
             } else {
                 direction = new Vector2(0.0f, 0.0f);
                 distance = 0;
@@ -54,12 +51,13 @@ public class AI extends AISuperClass {
         public final float speed;
     }
 
-    HashMap<Player, LinkedList<PlayerMetaData>> playerPositions;
+    HashMap<Player, LinkedList<PlayerMetaData>> playerMetaDataMap;
 
     enum State {
         PATH_FINDING,
         AIMING,
-        CHASING
+        CHASING,
+        DODGING
     }
 
     private State state;
@@ -77,9 +75,9 @@ public class AI extends AISuperClass {
         pathIndex = 0;
         state = State.PATH_FINDING;
 
-        playerPositions = new HashMap<>();
+        playerMetaDataMap = new HashMap<>();
         for(Player player : otherPlayers) {
-            playerPositions.put(player, new LinkedList<>());
+            playerMetaDataMap.put(player, new LinkedList<>());
         }
     }
 
@@ -116,32 +114,98 @@ public class AI extends AISuperClass {
         final long tickTime = System.currentTimeMillis();
 
         sampleDataTimer += tickTime - lastTickTime;
-        if(sampleDataTimer > 0) {
+        if(sampleDataTimer > 50) {
             for (Player player : otherPlayers) {
-                LinkedList<PlayerMetaData> metaDataArray = playerPositions.get(player);
+                LinkedList<PlayerMetaData> metaDataArray = playerMetaDataMap.get(player);
                 PlayerMetaData data = new PlayerMetaData(metaDataArray.isEmpty() ? null : metaDataArray.getFirst(), player.getPosition(), tickTime);
                 metaDataArray.addFirst(data);
-                if(metaDataArray.size() > 20) {
+                if (metaDataArray.size() > 5) {
                     metaDataArray.removeLast();
                 }
             }
-            sampleDataTimer = 0;
+        }
+
+        // Dodging
+        for(Bullet bullet : bullets) {
+            if(bullet.getOwner() != player) {
+                Vector2 bulletToPlayer = new Vector2(player.getPosition()).sub(bullet.getPosition());
+                Vector2 targetDirection = bulletToPlayer.cpy().nor();
+                Vector2 bulletDirection = new Vector2(MathUtils.cosDeg(bullet.getAngle()), MathUtils.sinDeg(bullet.getAngle()));
+                float dot = targetDirection.dot(bulletDirection);
+                if(dot > MathUtils.cosDeg(Math.max((1.0f - (bulletToPlayer.len() / 500.0f)) * 180.0f, 20.0f)) &&
+                        (lineOfSight.check(player.getPosition().cpy().add(Player.SIZE * 0.5f, Player.SIZE * 0.5f), bullet.getPosition()) ||
+                        lineOfSight.check(player.getPosition().cpy().add(-Player.SIZE * 0.5f,  Player.SIZE * 0.5f), bullet.getPosition()) ||
+                        lineOfSight.check(player.getPosition().cpy().add( Player.SIZE * 0.5f, -Player.SIZE * 0.5f), bullet.getPosition()) ||
+                        lineOfSight.check(player.getPosition().cpy().add(-Player.SIZE * 0.5f, -Player.SIZE * 0.5f), bullet.getPosition()))) {
+                    state = State.DODGING;
+                    break;
+                }
+            }
         }
 
         switch (state) {
-            case PATH_FINDING: {
-                // Update path every 500 ms
-                updatePathTimer += tickTime - lastTickTime;
-                if(updatePathTimer > 500) {
-                    // Find closest player
-                    targetPlayer = otherPlayers.get(0);
-                    for (int i = 1; i < otherPlayers.size(); i++) {
-                        if(player.getPosition().cpy().sub(targetPlayer.getPosition()).len2() > player.getPosition().cpy().sub(otherPlayers.get(i).getPosition()).len2()) {
-                            targetPlayer = otherPlayers.get(i);
+            case DODGING: {
+                if(bullets.size() > 0) {
+                    // Get closes bullet heading in our direction
+                    Bullet closestBullet = null;
+                    for (Bullet bullet : bullets) {
+                        if (bullet.getOwner() != player && (closestBullet == null || player.getPosition().cpy().sub(bullet.getPosition()).len2() < player.getPosition().cpy().sub(closestBullet.getPosition()).len2())) {
+                            Vector2 bulletToPlayer = new Vector2(player.getPosition()).sub(bullet.getPosition());
+                            Vector2 targetDirection = bulletToPlayer.cpy().nor();
+                            Vector2 bulletDirection = new Vector2(MathUtils.cosDeg(bullet.getAngle()), MathUtils.sinDeg(bullet.getAngle()));
+                            float dot = targetDirection.dot(bulletDirection);
+                            if (dot > MathUtils.cosDeg(Math.max((1.0f - (bulletToPlayer.len() / 500.0f)) * 180.0f, 20.0f)) &&
+                                    (lineOfSight.check(player.getPosition().cpy().add(Player.SIZE * 0.5f, Player.SIZE * 0.5f), bullet.getPosition()) ||
+                                    lineOfSight.check(player.getPosition().cpy().add(-Player.SIZE * 0.5f, Player.SIZE * 0.5f), bullet.getPosition()) ||
+                                    lineOfSight.check(player.getPosition().cpy().add(Player.SIZE * 0.5f, -Player.SIZE * 0.5f), bullet.getPosition()) ||
+                                    lineOfSight.check(player.getPosition().cpy().add(-Player.SIZE * 0.5f, -Player.SIZE * 0.5f), bullet.getPosition()))) {
+                                closestBullet = bullet;
+                            }
                         }
                     }
 
-                    // Calculate the path from the tank to the empty tile. Math.floor(x / Map.TILE_SIZEF) converts x from pixel coordinates to tile coordinates
+                    if(closestBullet != null) {
+                        Vector2 targetDirection = player.getPosition().cpy().sub(closestBullet.getPosition()).nor();
+                        Vector2 playerDirection = new Vector2(MathUtils.cosDeg(player.getAngle()), MathUtils.sinDeg(player.getAngle()));
+                        Vector2 bulletDirection = new Vector2(MathUtils.cosDeg(closestBullet.getAngle()), MathUtils.sinDeg(closestBullet.getAngle()));
+
+                        if(playerDirection.crs(bulletDirection) > 0) {
+                            send(TURN_TOWARDS, bulletDirection.angle() - 90);
+                        }
+                        else{
+                            send(TURN_TOWARDS, bulletDirection.angle() + 90);
+                        }
+
+                        if (bulletDirection.dot(targetDirection) > 0) {
+                            if(playerDirection.dot(bulletDirection) < 0.1f) {
+                                send(MOVE_BACKWARDS);
+                            } else if(playerDirection.dot(bulletDirection) > -0.1f) {
+                                send(MOVE_FORWARDS);
+                            }
+                        }
+                    } else {
+                        state = State.PATH_FINDING;
+                    }
+                } else {
+                    state = State.PATH_FINDING;
+                }
+            }
+            break;
+
+            case PATH_FINDING: {
+                // Update path every 500 ms
+                updatePathTimer += tickTime - lastTickTime;
+                if(targetPlayer == null || !targetPlayer.isAlive() || updatePathTimer > 500) {
+                    // Find closest player
+                    targetPlayer = null;
+                    for (Player otherPlayer : otherPlayers) {
+                        if(!otherPlayer.isAlive()) continue;
+                        if(targetPlayer == null || player.getPosition().cpy().sub(targetPlayer.getPosition()).len2() > player.getPosition().cpy().sub(otherPlayer.getPosition()).len2()) {
+                            targetPlayer = otherPlayer;
+                        }
+                    }
+
+                    // Calculate the path
                     path = pathFinder.calculatePath(
                             (int) Math.floor(player.getPosition().x / Map.TILE_SIZEF),
                             (int) Math.floor(player.getPosition().y / Map.TILE_SIZEF),
@@ -151,25 +215,30 @@ public class AI extends AISuperClass {
 
                     // pathIndex indicates the node our tank will approach in the path list
                     pathIndex = 0;
-                    send(CHANGE_NAME, "Pathfinding to: " + targetPlayer.getName());
                     updatePathTimer = 0;
                 }
 
                 if(lineOfSight.check(player.getPosition(), targetPlayer.getPosition())) {
                     float avgSpeed = 0.0f;
-                    for(PlayerMetaData data : playerPositions.get(targetPlayer)) {
+                    for(PlayerMetaData data : playerMetaDataMap.get(targetPlayer)) {
                         avgSpeed += data.speed;
                     }
-                    avgSpeed /= (float) playerPositions.get(targetPlayer).size();
+                    avgSpeed /= (float) playerMetaDataMap.get(targetPlayer).size();
 
-                    if(avgSpeed > 60.0) {
-                        state = State.CHASING;
+                    if(avgSpeed > 105.0) {
+                        if(lineOfSight.check(player.getPosition().cpy().add(Player.SIZE * 0.5f, Player.SIZE * 0.5f), targetPlayer.getPosition().cpy().add(Player.SIZE * 0.5f, Player.SIZE * 0.5f)) &&
+                                lineOfSight.check(player.getPosition().cpy().add(-Player.SIZE * 0.5f,  Player.SIZE * 0.5f), targetPlayer.getPosition().cpy().add(-Player.SIZE * 0.5f,  Player.SIZE * 0.5f)) &&
+                                lineOfSight.check(player.getPosition().cpy().add( Player.SIZE * 0.5f, -Player.SIZE * 0.5f), targetPlayer.getPosition().cpy().add( Player.SIZE * 0.5f, -Player.SIZE * 0.5f)) &&
+                                lineOfSight.check(player.getPosition().cpy().add(-Player.SIZE * 0.5f, -Player.SIZE * 0.5f), targetPlayer.getPosition().cpy().add(-Player.SIZE * 0.5f, -Player.SIZE * 0.5f))) {
+                            state = State.CHASING;
+                        }
                     }
                     else {
                         state = State.AIMING;
                     }
+                }
 
-                } else if (pathIndex < path.size()) {
+                if (pathIndex < path.size()) {
                     // Get the position of the node our tank is currently approaching, and convert it from tile coordinates to pixel coordinates
                     Vector2 target = new Vector2((path.get(pathIndex).x + 0.5f) * Map.TILE_SIZEF, (path.get(pathIndex).y + 0.5f) * Map.TILE_SIZEF);
 
@@ -190,40 +259,71 @@ public class AI extends AISuperClass {
             break;
 
             case AIMING: {
-                // Aim at the average position
-                send(CHANGE_NAME, "Aiming at: " + targetPlayer.getName());
+                // Make sure there is still line of sight
+                if (targetPlayer.isAlive() && lineOfSight.check(player.getPosition(), targetPlayer.getPosition())) {
+                    Vector2 avgVel = new Vector2(0.0f, 0.0f);
+                    Vector2 avgPos = new Vector2(0.0f, 0.0f);
+                    for(PlayerMetaData data : playerMetaDataMap.get(targetPlayer)) {
+                        avgVel.add(data.velocity);
+                        avgPos.add(data.position);
+                    }
+                    avgVel.scl(1.0f / playerMetaDataMap.get(targetPlayer).size());
+                    avgPos.scl(1.0f / playerMetaDataMap.get(targetPlayer).size());
+
+                    Vector2 target = getShootAtPoint(avgVel, avgPos);
+                    if (target != null) {
+                        Vector2 targetDirection = target.cpy().sub(player.getPosition()).nor();
+                        Vector2 playerDirection = new Vector2(MathUtils.cosDeg(player.getAngle()), MathUtils.sinDeg(player.getAngle()));
+
+                        // If the angle between the target direction and the player direction is less than 60 degrees, move forwards, otherwise stop moving forward to avoid moving too far off the path
+                        float dot = targetDirection.dot(playerDirection);
+                        if (dot > MathUtils.cosDeg(2)) {
+                            send(SHOOT);
+                        }
+
+                        // Turn towards the target
+                        send(TURN_TOWARDS, targetDirection.angle());
+                        send(STOP_MOVE);
+                    } else {
+                        state = State.PATH_FINDING;
+                    }
+                } else {
+                    state = State.PATH_FINDING;
+                }
             }
-            //break;
+            break;
 
             case CHASING: {
-                send(CHANGE_NAME, "Chasing: " + targetPlayer.getName());
+                // Make sure there is still line of sight
+                if(targetPlayer.isAlive() && lineOfSight.check(player.getPosition(), targetPlayer.getPosition())) {
+                    // Get point to shoot at
+                    PlayerMetaData data = playerMetaDataMap.get(targetPlayer).getFirst();
+                    Vector2 target = getShootAtPoint(data.velocity, data.position);
 
-                if(!lineOfSight.check(player.getPosition(), targetPlayer.getPosition())) {
-                    state = State.PATH_FINDING;
-                    break;
-                }
+                    // target == null if bullet cant reach in time
+                    if (target != null) {
+                        // Get vectors
+                        Vector2 targetDirection = target.cpy().sub(player.getPosition()).nor();
+                        Vector2 playerDirection = new Vector2(MathUtils.cosDeg(player.getAngle()), MathUtils.sinDeg(player.getAngle()));
 
-                PlayerMetaData data = playerPositions.get(targetPlayer).getFirst();
-                Vector2 target = getShootAtPoint(data.velocity, data.position);
-                if(target != null)
-                {
-                    Vector2 targetDirection = target.cpy().sub(player.getPosition()).nor();
-                    Vector2 playerDirection = new Vector2(MathUtils.cosDeg(player.getAngle()), MathUtils.sinDeg(player.getAngle()));
+                        // If the angle between the target direction and the player direction is less than 60 degrees, move forwards, otherwise stop moving forward to avoid moving too far off the path
+                        float dot = targetDirection.dot(playerDirection);
+                        if (dot > MathUtils.cosDeg(60) && player.getPosition().cpy().sub(targetPlayer.getPosition()).len() > 300) {
+                            send(MOVE_FORWARDS);
+                        } else {
+                            send(STOP_MOVE);
+                        }
 
-                    // If the angle between the target direction and the player direction is less than 60 degrees, move forwards, otherwise stop moving forward to avoid moving too far off the path
-                    float dot = targetDirection.dot(playerDirection);
-                    if (dot > MathUtils.cosDeg(60)) {
-                        //send(MOVE_FORWARDS);
+                        // Shoot if aiming at target
+                        if (dot > MathUtils.cosDeg(2)) {
+                            send(SHOOT);
+                        }
+
+                        // Turn towards the target
+                        send(TURN_TOWARDS, targetDirection.angle());
                     } else {
-                        send(STOP_MOVE);
+                        state = State.PATH_FINDING;
                     }
-
-                    if (dot > MathUtils.cosDeg(2)) {
-                        send(SHOOT);
-                    }
-
-                    // Turn towards the target
-                    send(TURN_TOWARDS, targetDirection.angle());
                 } else {
                     state = State.PATH_FINDING;
                 }
