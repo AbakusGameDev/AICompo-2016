@@ -8,7 +8,7 @@ public class Bullet {
 	private Vector2 position;
 	private float angle;
 
-	public final static float SPEED = 10.0f; // pixels / sec
+	public final static float SPEED = 10.0f / (1.0f / 60.0f); // pixels / sec
 	public final static float SIZE = 1.0f; // A point
 	
 	public Bullet(int id, Player owner) {

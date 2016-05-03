@@ -3,14 +3,17 @@ package com.aicompo.ai;
 import com.aicompo.game.AISuperClass;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.Array;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Random;
 
 // This AI selects a random tile on the map, moves to it, and repeats these steps. If the player is facing another player with a clear line of sight, it shoots
 public class AI extends AISuperClass {
     // This is the initial name for your tank when the match starts
-    public static final String PLAYER_NAME = "AI";
+    public static final String PLAYER_NAME = "BitsauceAI";
 
     // Variables for this AI
     private Random random;
@@ -18,6 +21,48 @@ public class AI extends AISuperClass {
     int pathIndex;
     AStar pathFinder;
     LineOfSight lineOfSight;
+    long lastTickTime;
+    long sampleDataTimer;
+    long updatePathTimer;
+    Player targetPlayer;
+
+    class PlayerMetaData {
+        PlayerMetaData(PlayerMetaData prevData, Vector2 position, long time) {
+            this.position = position;
+            this.time = time;
+
+            if(prevData != null) {
+                direction = prevData.position.cpy().sub(position).nor();
+                distance =  prevData.position.cpy().sub(position).len();
+                speed = (1000.0f * distance) / (time - prevData.time);
+                velocity = direction.cpy().scl(speed);
+
+                System.out.println("Dt: "+(time-prevData.time));
+            } else {
+                direction = new Vector2(0.0f, 0.0f);
+                distance = 0;
+                speed = 0;
+                velocity = new Vector2(0.0f, 0.0f);
+            }
+        }
+
+        public final Vector2 position;
+        public final Vector2 velocity;
+        public final Vector2 direction;
+        public final long time;
+        public final float distance;
+        public final float speed;
+    }
+
+    HashMap<Player, LinkedList<PlayerMetaData>> playerPositions;
+
+    enum State {
+        PATH_FINDING,
+        AIMING,
+        CHASING
+    }
+
+    private State state;
 
     @Override
     public void init() {
@@ -30,6 +75,12 @@ public class AI extends AISuperClass {
         lineOfSight = new LineOfSight();
         path = new ArrayList<Node>();
         pathIndex = 0;
+        state = State.PATH_FINDING;
+
+        playerPositions = new HashMap<>();
+        for(Player player : otherPlayers) {
+            playerPositions.put(player, new LinkedList<>());
+        }
     }
 
     @Override
@@ -61,60 +112,144 @@ public class AI extends AISuperClass {
         //          // Not your bullet
         //      }
         // }
-    	
-    	// Loop through all other players
-    	for (Player otherPlayer : otherPlayers) {
-    		// Get the vector from your player to the other player and normalize it with .nor() (to make its length equal to 1). Then get the vector for your player's direction
-    		Vector2 targetDirection = new Vector2(otherPlayer.getPosition()).sub(player.getPosition()).nor(),
-        			playerDirection = new Vector2(MathUtils.cosDeg(player.getAngle()), MathUtils.sinDeg(player.getAngle()));
-    		
-    		// Get the dot product between these two vectors. The dot product between two (normalized) vectors is equal to cosine of the angle between them: a • b = cos(angle between a and b)
-    		// The dot product will be 0 if the vectors are perpendicular and 1 if they are equal. So the more they are facing the same direction, the closer the value will be to 1
-    		// If the dot product is greater than cos(10), it means the angle between the vectors is less than 10 degrees and that your player is facing the other player
-    		float dot = targetDirection.dot(playerDirection);
-    		if (dot > MathUtils.cosDeg(10)) {
-    			// Shoot if there's an open line between your player's position and the other player's position
-    			if (lineOfSight.check(player.getPosition(), otherPlayer.getPosition())) {
-    				send(SHOOT);
-    			}
-    		}
-    	}
-        
-        // Calculate path towards a random tile
-        if (pathIndex == path.size()) {
-        	// Find a random empty tile. random.nextInt(v) returns a value from 0 to v. Map.WIDTH and Map.HEIGHT is given in number of tiles
-        	int x = 0, y = 0;
-        	while (Map.isTile(x, y)) {x = random.nextInt(Map.WIDTH); y = random.nextInt(Map.HEIGHT);}
-        	
-        	// Calculate the path from the tank to the empty tile. Math.floor(x / Map.TILE_SIZEF) converts x from pixel coordinates to tile coordinates 
-        	path = pathFinder.calculatePath(
-        		(int) Math.floor(player.getPosition().x / Map.TILE_SIZEF),
-        		(int) Math.floor(player.getPosition().y / Map.TILE_SIZEF),
-        		x, y
-        	);
-        	
-        	// pathIndex indicates the node our tank will approach in the path list
-        	pathIndex = 0;
+
+        final long tickTime = System.currentTimeMillis();
+
+        sampleDataTimer += tickTime - lastTickTime;
+        if(sampleDataTimer > 0) {
+            for (Player player : otherPlayers) {
+                LinkedList<PlayerMetaData> metaDataArray = playerPositions.get(player);
+                PlayerMetaData data = new PlayerMetaData(metaDataArray.isEmpty() ? null : metaDataArray.getFirst(), player.getPosition(), tickTime);
+                metaDataArray.addFirst(data);
+                if(metaDataArray.size() > 20) {
+                    metaDataArray.removeLast();
+                }
+            }
+            sampleDataTimer = 0;
         }
-    	
-        // If the player has not reached the end of the path, keep moving
-    	if (pathIndex < path.size()) {
-    		// Get the position of the node our tank is currently approaching, and convert it from tile coordinates to pixel coordinates
-    		Vector2 target = new Vector2((path.get(pathIndex).x + 0.5f) * Map.TILE_SIZEF, (path.get(pathIndex).y + 0.5f) * Map.TILE_SIZEF);
-    		
-    		Vector2 targetDirection = new Vector2(target).sub(player.getPosition()).nor(),
-        			playerDirection = new Vector2(MathUtils.cosDeg(player.getAngle()), MathUtils.sinDeg(player.getAngle()));
-    		
-    		// If the angle between the target direction and the player direction is less than 60 degrees, move forwards, otherwise stop moving forward to avoid moving too far off the path
-    		float dot = targetDirection.dot(playerDirection);
-        	if (dot > MathUtils.cosDeg(60)) send(MOVE_FORWARDS); else send(STOP_MOVE);
-        	
-        	// Turn towards the target
-        	send(TURN_TOWARDS, targetDirection.angle());
-    		
-        	// If the distance (.dst()) between the player and the target is small enough, start approaching the next node in the path
-    		if (player.getPosition().dst(target) < Map.TILE_SIZEF * 0.5) ++pathIndex;
-    	}
+
+        switch (state) {
+            case PATH_FINDING: {
+                // Update path every 500 ms
+                updatePathTimer += tickTime - lastTickTime;
+                if(updatePathTimer > 500) {
+                    // Find closest player
+                    targetPlayer = otherPlayers.get(0);
+                    for (int i = 1; i < otherPlayers.size(); i++) {
+                        if(player.getPosition().cpy().sub(targetPlayer.getPosition()).len2() > player.getPosition().cpy().sub(otherPlayers.get(i).getPosition()).len2()) {
+                            targetPlayer = otherPlayers.get(i);
+                        }
+                    }
+
+                    // Calculate the path from the tank to the empty tile. Math.floor(x / Map.TILE_SIZEF) converts x from pixel coordinates to tile coordinates
+                    path = pathFinder.calculatePath(
+                            (int) Math.floor(player.getPosition().x / Map.TILE_SIZEF),
+                            (int) Math.floor(player.getPosition().y / Map.TILE_SIZEF),
+                            (int) Math.floor(targetPlayer.getPosition().x / Map.TILE_SIZEF),
+                            (int) Math.floor(targetPlayer.getPosition().y / Map.TILE_SIZEF)
+                    );
+
+                    // pathIndex indicates the node our tank will approach in the path list
+                    pathIndex = 0;
+                    send(CHANGE_NAME, "Pathfinding to: " + targetPlayer.getName());
+                    updatePathTimer = 0;
+                }
+
+                if(lineOfSight.check(player.getPosition(), targetPlayer.getPosition())) {
+                    float avgSpeed = 0.0f;
+                    for(PlayerMetaData data : playerPositions.get(targetPlayer)) {
+                        avgSpeed += data.speed;
+                    }
+                    avgSpeed /= (float) playerPositions.get(targetPlayer).size();
+
+                    if(avgSpeed > 60.0) {
+                        state = State.CHASING;
+                    }
+                    else {
+                        state = State.AIMING;
+                    }
+
+                } else if (pathIndex < path.size()) {
+                    // Get the position of the node our tank is currently approaching, and convert it from tile coordinates to pixel coordinates
+                    Vector2 target = new Vector2((path.get(pathIndex).x + 0.5f) * Map.TILE_SIZEF, (path.get(pathIndex).y + 0.5f) * Map.TILE_SIZEF);
+
+                    Vector2 targetDirection = new Vector2(target).sub(player.getPosition()).nor();
+                    Vector2 playerDirection = new Vector2(MathUtils.cosDeg(player.getAngle()), MathUtils.sinDeg(player.getAngle()));
+
+                    // If the angle between the target direction and the player direction is less than 60 degrees, move forwards, otherwise stop moving forward to avoid moving too far off the path
+                    float dot = targetDirection.dot(playerDirection);
+                    if (dot > MathUtils.cosDeg(60)) send(MOVE_FORWARDS); else send(STOP_MOVE);
+
+                    // Turn towards the target
+                    send(TURN_TOWARDS, targetDirection.angle());
+
+                    // If the distance (.dst()) between the player and the target is small enough, start approaching the next node in the path
+                    if (player.getPosition().dst(target) < Map.TILE_SIZEF * 0.5) ++pathIndex;
+                }
+            }
+            break;
+
+            case AIMING: {
+                // Aim at the average position
+                send(CHANGE_NAME, "Aiming at: " + targetPlayer.getName());
+            }
+            //break;
+
+            case CHASING: {
+                send(CHANGE_NAME, "Chasing: " + targetPlayer.getName());
+
+                if(!lineOfSight.check(player.getPosition(), targetPlayer.getPosition())) {
+                    state = State.PATH_FINDING;
+                    break;
+                }
+
+                PlayerMetaData data = playerPositions.get(targetPlayer).getFirst();
+                Vector2 target = getShootAtPoint(data.velocity, data.position);
+                if(target != null)
+                {
+                    Vector2 targetDirection = target.cpy().sub(player.getPosition()).nor();
+                    Vector2 playerDirection = new Vector2(MathUtils.cosDeg(player.getAngle()), MathUtils.sinDeg(player.getAngle()));
+
+                    // If the angle between the target direction and the player direction is less than 60 degrees, move forwards, otherwise stop moving forward to avoid moving too far off the path
+                    float dot = targetDirection.dot(playerDirection);
+                    if (dot > MathUtils.cosDeg(60)) {
+                        //send(MOVE_FORWARDS);
+                    } else {
+                        send(STOP_MOVE);
+                    }
+
+                    if (dot > MathUtils.cosDeg(2)) {
+                        send(SHOOT);
+                    }
+
+                    // Turn towards the target
+                    send(TURN_TOWARDS, targetDirection.angle());
+                } else {
+                    state = State.PATH_FINDING;
+                }
+            }
+            break;
+        }
+
+        lastTickTime = tickTime;
+    }
+
+    Vector2 getShootAtPoint(Vector2 targetVelocity, Vector2 targetPosition) {
+        Vector2 position = player.getPosition();
+
+        float a = targetVelocity.x * targetVelocity.x + targetVelocity.y * targetVelocity.y - Bullet.SPEED * Bullet.SPEED;
+        float b = 2 * (targetVelocity.x * (targetPosition.x - position.x) + targetVelocity.y * (targetPosition.y - position.y));
+        float c = ((targetPosition.x - position.x) * (targetPosition.x - position.x)) + ((targetPosition.y - position.y) * (targetPosition.y - position.y));
+
+        float disc = b * b - 4 * a * c;
+        if(disc < 0.0f) {
+            return null;
+        }
+
+        float t1 = (-b + (float) Math.sqrt(disc)) / (2 * a);
+        float t2 = (-b - (float) Math.sqrt(disc)) / (2 * a);
+
+        return targetPosition.cpy().add(targetVelocity.cpy().scl(Math.min(t1, t2)));
     }
 
     @Override
