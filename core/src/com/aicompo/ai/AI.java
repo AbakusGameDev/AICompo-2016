@@ -90,7 +90,10 @@ public class AI extends AISuperClass {
             		float angle = 45.0f;
             		if (playerBulletCross < 0.0f) angle *= -1.0f;
             		// FIND TARGET
-            		for (int i = 0; i < 8; i++) {
+            		dodgeAngel = bullet.getAngle() + angle;
+            		Vector2 targetDirection = playerDirection.cpy().rotate(bullet.getAngle() + angle).nor().scl(2.0f);
+            		target = targetDirection.add(player.getPosition());
+            		/*for (int i = 0; i < 8; i++) {
             			if (isDodgePathObscoured(angle, bullet.getAngle())) {
             				angle -= 22.0f;
             				//send(CHANGE_NAME, "PATH OBSCOURED");
@@ -100,7 +103,7 @@ public class AI extends AISuperClass {
             				System.out.println("FOUND SOLUTION");
             				break;
             			}
-            		}
+            		}*/
             	}
             }
     	}
@@ -161,7 +164,7 @@ public class AI extends AISuperClass {
     		playerToTarget = (new Vector2(target).sub(player.getPosition())).nor();
             float cross = playerToTarget.crs(playerDirection);
             if (cross < 0.5f && cross > -0.5f) {
-            	//send(SHOOT);
+            	send(SHOOT);
             }
         	//setName("LOS!");
         }
