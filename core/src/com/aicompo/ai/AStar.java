@@ -2,6 +2,8 @@ package com.aicompo.ai;
 
 import java.util.ArrayList;
 
+import com.badlogic.gdx.math.Vector2;
+
 public class AStar {
 	private Node[][] nodeGrid;
 	
@@ -83,5 +85,10 @@ public class AStar {
     	}
     	
     	return path;
+    }
+    
+    public ArrayList<Node> calculatePath(Vector2 start, Vector2 target){
+    	return calculatePath((int)Math.floor(start.x / Map.TILE_SIZEF), (int)Math.floor(start.y / Map.TILE_SIZEF),
+    						 (int)Math.floor(target.x / Map.TILE_SIZEF), (int)Math.floor(target.y / Map.TILE_SIZEF));
     }
 }
