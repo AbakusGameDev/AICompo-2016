@@ -66,6 +66,7 @@ public class AI extends AISuperClass {
     	
     	// BULLET DODGING
     	//setName("JAB_2.0");
+    	float dodgeAngel = 0.0f;
     	boolean isDanger = false;
     	for (Bullet bullet : bullets) {
     		bullet.getPosition().cpy();
@@ -73,25 +74,32 @@ public class AI extends AISuperClass {
             Vector2 bulletDirection = new Vector2(MathUtils.cosDeg(bullet.getAngle()), MathUtils.sinDeg(bullet.getAngle()));
             float playerBulletDot = bulletToPlayer.dot(bulletDirection);
             if (MathUtils.cosDeg(10) < playerBulletDot) {
+            	//System.out.println(""+playerBulletCross);
             	// TRY DODGING IF IN DANGER
             	if (lineOfSight.check(bullet.getPosition(), player.getPosition())) {
+            		float playerBulletCross = bulletToPlayer.crs(bulletDirection);
             		//setName("DANGER!");
             		isDanger = true;
+            		float angle = 45.0f;
+            		if (playerBulletCross < 0.0f) {
+            			angle *= -1;
+            		}
             		// FIND TARGET
-            		Vector2 targetDirection = playerDirection.cpy().rotate(bullet.getAngle() + MathUtils.PI/2.0f).nor().scl(2.0f);
+            		dodgeAngel = bullet.getAngle() + angle;
+            		Vector2 targetDirection = playerDirection.cpy().rotate(bullet.getAngle() + angle).nor().scl(2.0f);
             		target = targetDirection.add(player.getPosition());
             	}
             }
     	}
     	Vector2 playerToTarget = (target.cpy().sub(player.getPosition())).nor();
-        float targetPlayerCross = playerToTarget.crs(playerDirection);
+        //float targetPlayerCross = playerToTarget.crs(playerDirection);
         float targetPlayerDot = playerToTarget.dot(playerDirection);
         // Rotate towards it
-        if (targetPlayerCross < 0.0f) {
+        /*if (targetPlayerCross < 0.0f) {
             send(TURN_RIGHT);
         } else if (targetPlayerCross > 0.0f) {
             send(TURN_LEFT);
-        }
+        }*/
         // IN DANGER
     	if (isDanger) {
     		dangerTime = System.currentTimeMillis();
@@ -99,8 +107,10 @@ public class AI extends AISuperClass {
     		// Back or forth
             if (targetPlayerDot < 0) {
             	send(MOVE_FORWARDS);
+            	send(TURN_TOWARDS, dodgeAngel+180.0f);
             } else {
             	send(MOVE_BACKWARDS);
+            	send(TURN_TOWARDS, dodgeAngel);            	
             }
             return;
     	}
