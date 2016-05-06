@@ -15,7 +15,6 @@ public class AI extends AISuperClass {
     public static final String PLAYER_NAME = "BitsauceAI";
 
     // Variables for this AI
-    private Random random;
     private ArrayList<Node> path;
     int pathIndex;
     AStar pathFinder;
@@ -24,6 +23,9 @@ public class AI extends AISuperClass {
     long updatePathTimer;
     long sampleDataTimer;
     Player targetPlayer;
+    Bullet prevClosestBullet;
+
+    int dodgeTurnDirection;
 
     class PlayerMetaData {
         PlayerMetaData(PlayerMetaData prevData, Vector2 position, long time) {
@@ -68,7 +70,6 @@ public class AI extends AISuperClass {
         // At this point the players and the map have been received
 
         // Initialize variables
-        random = new Random();
         pathFinder = new AStar();
         lineOfSight = new LineOfSight();
         path = new ArrayList<Node>();
@@ -169,17 +170,53 @@ public class AI extends AISuperClass {
                         Vector2 playerDirection = new Vector2(MathUtils.cosDeg(player.getAngle()), MathUtils.sinDeg(player.getAngle()));
                         Vector2 bulletDirection = new Vector2(MathUtils.cosDeg(closestBullet.getAngle()), MathUtils.sinDeg(closestBullet.getAngle()));
 
-                        if(playerDirection.crs(bulletDirection) > 0) {
-                            send(TURN_TOWARDS, bulletDirection.angle() - 90);
+                        if(prevClosestBullet != closestBullet) {
+                            int dodgeMoveDir = 0;
+                            if (bulletDirection.dot(targetDirection) > 0) {
+                                if (playerDirection.dot(bulletDirection) < 0.1f) {
+                                    dodgeMoveDir = -1;
+                                } else if (playerDirection.dot(bulletDirection) > -0.1f) {
+                                    dodgeMoveDir = 1;
+                                }
+                            }
+
+                            Vector2 toPos;
+
+                            if(playerDirection.crs(bulletDirection) > 0) {
+                                if(dodgeMoveDir == -1) {
+                                    toPos = player.getPosition().cpy().sub(new Vector2(MathUtils.cosDeg(closestBullet.getAngle() - 45), MathUtils.sinDeg(closestBullet.getAngle() - 45)).scl(50));
+                                }
+                                else {
+                                    toPos = player.getPosition().cpy().add(new Vector2(MathUtils.cosDeg(closestBullet.getAngle() - 45), MathUtils.sinDeg(closestBullet.getAngle() - 45)).scl(50));
+                                }
+                            }
+                            else {
+                                if(dodgeMoveDir == -1) {
+                                    toPos = player.getPosition().cpy().sub(new Vector2(MathUtils.cosDeg(closestBullet.getAngle() + 45), MathUtils.sinDeg(closestBullet.getAngle() + 45)).scl(50));
+                                }
+                                else {
+                                    toPos = player.getPosition().cpy().add(new Vector2(MathUtils.cosDeg(closestBullet.getAngle() + 45), MathUtils.sinDeg(closestBullet.getAngle() + 45)).scl(50));
+                                }
+                            }
+
+                            if (playerDirection.crs(bulletDirection) > 0 && lineOfSight.check(player.getPosition().cpy(), toPos)) {
+                                dodgeTurnDirection = -1;
+                            } else {
+                                dodgeTurnDirection = 1;
+                            }
+                            prevClosestBullet = closestBullet;
                         }
-                        else{
+
+                        if (dodgeTurnDirection == -1) {
+                            send(TURN_TOWARDS, bulletDirection.angle() - 90);
+                        } else if(dodgeTurnDirection == 1) {
                             send(TURN_TOWARDS, bulletDirection.angle() + 90);
                         }
 
                         if (bulletDirection.dot(targetDirection) > 0) {
-                            if(playerDirection.dot(bulletDirection) < 0.1f) {
+                            if (playerDirection.dot(bulletDirection) < 0.1f) {
                                 send(MOVE_BACKWARDS);
-                            } else if(playerDirection.dot(bulletDirection) > -0.1f) {
+                            } else if (playerDirection.dot(bulletDirection) > -0.1f) {
                                 send(MOVE_FORWARDS);
                             }
                         }
