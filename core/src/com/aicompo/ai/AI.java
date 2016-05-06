@@ -22,6 +22,7 @@ public class AI extends AISuperClass {
     private boolean findNewPath;
     private Vector2 targetLastPos;
     private long dangerTime;
+    private float dodgeAngel;
 
     @Override
     public void init() {
@@ -36,6 +37,14 @@ public class AI extends AISuperClass {
         progress = 0;
         findNewPath = true;
         dangerTime = System.currentTimeMillis();
+        dodgeAngel = 0.0f;
+    }
+    
+    private boolean isDodgePathObscoured(float tryAngle, float bulletAngle) {
+		dodgeAngel = bulletAngle + tryAngle;
+		Vector2 rot = new Vector2(MathUtils.cosDeg(dodgeAngel), MathUtils.sinDeg(dodgeAngel));
+		target = player.getPosition().cpy().add(rot.scl(Map.TILE_SIZEF));
+		return Map.isTile((int)Math.floor(target.x / Map.TILE_SIZEF), (int)Math.floor(target.y / Map.TILE_SIZEF));
     }
 
     @Override
@@ -66,7 +75,6 @@ public class AI extends AISuperClass {
     	
     	// BULLET DODGING
     	//setName("JAB_2.0");
-    	float dodgeAngel = 0.0f;
     	boolean isDanger = false;
     	for (Bullet bullet : bullets) {
     		bullet.getPosition().cpy();
@@ -74,32 +82,30 @@ public class AI extends AISuperClass {
             Vector2 bulletDirection = new Vector2(MathUtils.cosDeg(bullet.getAngle()), MathUtils.sinDeg(bullet.getAngle()));
             float playerBulletDot = bulletToPlayer.dot(bulletDirection);
             if (MathUtils.cosDeg(10) < playerBulletDot) {
-            	//System.out.println(""+playerBulletCross);
             	// TRY DODGING IF IN DANGER
             	if (lineOfSight.check(bullet.getPosition(), player.getPosition())) {
             		float playerBulletCross = bulletToPlayer.crs(bulletDirection);
             		//setName("DANGER!");
             		isDanger = true;
             		float angle = 45.0f;
-            		if (playerBulletCross < 0.0f) {
-            			angle *= -1;
-            		}
+            		if (playerBulletCross < 0.0f) angle *= -1.0f;
             		// FIND TARGET
-            		dodgeAngel = bullet.getAngle() + angle;
-            		Vector2 targetDirection = playerDirection.cpy().rotate(bullet.getAngle() + angle).nor().scl(2.0f);
-            		target = targetDirection.add(player.getPosition());
+            		for (int i = 0; i < 8; i++) {
+            			if (isDodgePathObscoured(angle, bullet.getAngle())) {
+            				angle -= 22.0f;
+            				//send(CHANGE_NAME, "PATH OBSCOURED");
+            				System.out.println("PATH OBSCOURED");
+            			} else {
+            				//send(CHANGE_NAME, "FOUND SOLUTION");
+            				System.out.println("FOUND SOLUTION");
+            				break;
+            			}
+            		}
             	}
             }
     	}
     	Vector2 playerToTarget = (target.cpy().sub(player.getPosition())).nor();
-        //float targetPlayerCross = playerToTarget.crs(playerDirection);
         float targetPlayerDot = playerToTarget.dot(playerDirection);
-        // Rotate towards it
-        /*if (targetPlayerCross < 0.0f) {
-            send(TURN_RIGHT);
-        } else if (targetPlayerCross > 0.0f) {
-            send(TURN_LEFT);
-        }*/
         // IN DANGER
     	if (isDanger) {
     		dangerTime = System.currentTimeMillis();
@@ -136,20 +142,10 @@ public class AI extends AISuperClass {
     			target = new Vector2(
         				(path.get(progress).x + 0.5f) * Map.TILE_SIZEF,
         				(path.get(progress).y + 0.5f) * Map.TILE_SIZEF);
-        		if (target.dst(player.getPosition()) < Map.TILE_SIZEF * 0.5f) {
-        			progress++;
-        		}
+        		if (target.dst(player.getPosition()) < Map.TILE_SIZEF * 0.5f) progress++;
     		}
-    		// Calculate cross product
             playerToTarget = (new Vector2(target).sub(player.getPosition())).nor();
             
-            //float cross = playerToTarget.crs(playerDirection);
-            // Rotate towards it
-            /*if (cross < 0.0f) {
-                send(TURN_RIGHT);
-            } else if (cross > 0.0f) {
-                send(TURN_LEFT);
-            }*/
             send(TURN_TOWARDS, playerToTarget.angle());
 
             // Move forwards and shoot
@@ -159,16 +155,13 @@ public class AI extends AISuperClass {
             } else {
             	send(STOP_MOVE);
             }
-    	} else {
-    		send(STOP_MOVE);
-    		send(STOP_TURN);
     	}
     	
     	if (los) {
     		playerToTarget = (new Vector2(target).sub(player.getPosition())).nor();
             float cross = playerToTarget.crs(playerDirection);
-            if (cross < 0.2f && cross > -0.2f) {
-            	send(SHOOT);
+            if (cross < 0.5f && cross > -0.5f) {
+            	//send(SHOOT);
             }
         	//setName("LOS!");
         }
