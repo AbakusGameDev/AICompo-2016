@@ -31,7 +31,9 @@ public class AI extends AISuperClass {
     String[] randomDodgeName = {
             "Whoa",
             "Close one",
-            "*Woosh*"
+            "*Dodging sounds*",
+            "Bullet detected",
+            ""
     };
 
     class PlayerMetaData {
@@ -148,7 +150,11 @@ public class AI extends AISuperClass {
                                     lineOfSight.check(player.getPosition().cpy().add(Player.SIZE * 0.5f, -Player.SIZE * 0.5f), bullet.getPosition()) ||
                                     lineOfSight.check(player.getPosition().cpy().add(-Player.SIZE * 0.5f, -Player.SIZE * 0.5f), bullet.getPosition()))) {
                         state = State.DODGING;
-                        send(CHANGE_NAME, randomDodgeName[random.nextInt(randomDodgeName.length)]);
+                        String name = randomDodgeName[random.nextInt(randomDodgeName.length)];
+                        if(name.isEmpty()) {
+                            name = "Hey, that's not nice "+bullet.getOwner().getName() + "!";
+                        }
+                        send(CHANGE_NAME, "BitsauceAI: "+randomDodgeName[random.nextInt(randomDodgeName.length)]);
                         break;
                     }
                 }
@@ -264,10 +270,17 @@ public class AI extends AISuperClass {
                     // pathIndex indicates the node our tank will approach in the path list
                     pathIndex = 0;
                     updatePathTimer = 0;
-                    send(CHANGE_NAME, "Searching for "+targetPlayer.getName());
+                    send(CHANGE_NAME, "BitsauceAI: Searching for "+targetPlayer.getName());
                 }
 
-                if(lineOfSight.check(player.getPosition(), targetPlayer.getPosition())) {
+                // Get point to shoot at
+                Vector2 shootAtPoint;
+                {
+                    PlayerMetaData data = playerMetaDataMap.get(targetPlayer).getFirst();
+                    shootAtPoint = getShootAtPoint(data.velocity, data.position);
+                }
+
+                if(lineOfSight.check(player.getPosition(), shootAtPoint)) {
                     float avgSpeed = 0.0f;
                     for(PlayerMetaData data : playerMetaDataMap.get(targetPlayer)) {
                         avgSpeed += data.speed;
@@ -309,17 +322,18 @@ public class AI extends AISuperClass {
 
             case AIMING: {
                 // Make sure there is still line of sight
-                if (targetPlayer.isAlive() && lineOfSight.check(player.getPosition(), targetPlayer.getPosition())) {
-                    Vector2 avgVel = new Vector2(0.0f, 0.0f);
-                    Vector2 avgPos = new Vector2(0.0f, 0.0f);
-                    for(PlayerMetaData data : playerMetaDataMap.get(targetPlayer)) {
-                        avgVel.add(data.velocity);
-                        avgPos.add(data.position);
-                    }
-                    avgVel.scl(1.0f / playerMetaDataMap.get(targetPlayer).size());
-                    avgPos.scl(1.0f / playerMetaDataMap.get(targetPlayer).size());
+                Vector2 avgVel = new Vector2(0.0f, 0.0f);
+                Vector2 avgPos = new Vector2(0.0f, 0.0f);
+                for(PlayerMetaData data : playerMetaDataMap.get(targetPlayer)) {
+                    avgVel.add(data.velocity);
+                    avgPos.add(data.position);
+                }
+                avgVel.scl(1.0f / playerMetaDataMap.get(targetPlayer).size());
+                avgPos.scl(1.0f / playerMetaDataMap.get(targetPlayer).size());
 
-                    Vector2 target = getShootAtPoint(avgVel, avgPos);
+                Vector2 target = getShootAtPoint(avgVel, avgPos);
+
+                if (targetPlayer.isAlive() && lineOfSight.check(player.getPosition(), target)) {
                     if (target != null) {
                         Vector2 targetDirection = target.cpy().sub(player.getPosition()).nor();
                         Vector2 playerDirection = new Vector2(MathUtils.cosDeg(player.getAngle()), MathUtils.sinDeg(player.getAngle()));
@@ -339,17 +353,19 @@ public class AI extends AISuperClass {
                 } else {
                     state = State.PATH_FINDING;
                 }
-                send(CHANGE_NAME, "Steady...");
+                send(CHANGE_NAME, "BitsauceAI: Steady...");
             }
             break;
 
             case CHASING: {
-                send(CHANGE_NAME, "Chasing down "+targetPlayer.getName());
+                send(CHANGE_NAME, "BitsauceAI: Chasing down "+targetPlayer.getName());
+
+                // Get point to shoot at
+                PlayerMetaData data = playerMetaDataMap.get(targetPlayer).getFirst();
+                Vector2 target = getShootAtPoint(data.velocity, data.position);
+
                 // Make sure there is still line of sight
-                if(targetPlayer.isAlive() && lineOfSight.check(player.getPosition(), targetPlayer.getPosition())) {
-                    // Get point to shoot at
-                    PlayerMetaData data = playerMetaDataMap.get(targetPlayer).getFirst();
-                    Vector2 target = getShootAtPoint(data.velocity, data.position);
+                if(targetPlayer.isAlive() && lineOfSight.check(player.getPosition(), target)) {
 
                     // target == null if bullet cant reach in time
                     if (target != null) {
@@ -413,6 +429,6 @@ public class AI extends AISuperClass {
     @Override
     public void matchEnded() {
         // Called when the match has ended
-        send(CHANGE_NAME, "GG");
+        send(CHANGE_NAME, "BitsauceAI: GG");
     }
 }
