@@ -15,6 +15,7 @@ public class AI extends AISuperClass {
     public static final String PLAYER_NAME = "BitsauceAI";
 
     // Variables for this AI
+    Random random;
     private ArrayList<Node> path;
     int pathIndex;
     AStar pathFinder;
@@ -26,6 +27,12 @@ public class AI extends AISuperClass {
     Bullet prevClosestBullet;
 
     int dodgeTurnDirection;
+
+    String[] randomDodgeName = {
+            "Whoa",
+            "Close one",
+            "*Woosh*"
+    };
 
     class PlayerMetaData {
         PlayerMetaData(PlayerMetaData prevData, Vector2 position, long time) {
@@ -70,6 +77,7 @@ public class AI extends AISuperClass {
         // At this point the players and the map have been received
 
         // Initialize variables
+        random = new Random();
         pathFinder = new AStar();
         lineOfSight = new LineOfSight();
         path = new ArrayList<Node>();
@@ -127,19 +135,22 @@ public class AI extends AISuperClass {
         }
 
         // Dodging
-        for(Bullet bullet : bullets) {
-            if(bullet.getOwner() != player) {
-                Vector2 bulletToPlayer = new Vector2(player.getPosition()).sub(bullet.getPosition());
-                Vector2 targetDirection = bulletToPlayer.cpy().nor();
-                Vector2 bulletDirection = new Vector2(MathUtils.cosDeg(bullet.getAngle()), MathUtils.sinDeg(bullet.getAngle()));
-                float dot = targetDirection.dot(bulletDirection);
-                if(dot > MathUtils.cosDeg(Math.max((1.0f - (bulletToPlayer.len() / 500.0f)) * 180.0f, 20.0f)) &&
-                        (lineOfSight.check(player.getPosition().cpy().add(Player.SIZE * 0.5f, Player.SIZE * 0.5f), bullet.getPosition()) ||
-                        lineOfSight.check(player.getPosition().cpy().add(-Player.SIZE * 0.5f,  Player.SIZE * 0.5f), bullet.getPosition()) ||
-                        lineOfSight.check(player.getPosition().cpy().add( Player.SIZE * 0.5f, -Player.SIZE * 0.5f), bullet.getPosition()) ||
-                        lineOfSight.check(player.getPosition().cpy().add(-Player.SIZE * 0.5f, -Player.SIZE * 0.5f), bullet.getPosition()))) {
-                    state = State.DODGING;
-                    break;
+        if(state != State.DODGING) {
+            for (Bullet bullet : bullets) {
+                if (bullet.getOwner() != player) {
+                    Vector2 bulletToPlayer = new Vector2(player.getPosition()).sub(bullet.getPosition());
+                    Vector2 targetDirection = bulletToPlayer.cpy().nor();
+                    Vector2 bulletDirection = new Vector2(MathUtils.cosDeg(bullet.getAngle()), MathUtils.sinDeg(bullet.getAngle()));
+                    float dot = targetDirection.dot(bulletDirection);
+                    if (dot > MathUtils.cosDeg(Math.max((1.0f - (bulletToPlayer.len() / 500.0f)) * 90.0f, 20.0f)) &&
+                            (lineOfSight.check(player.getPosition().cpy().add(Player.SIZE * 0.5f, Player.SIZE * 0.5f), bullet.getPosition()) ||
+                                    lineOfSight.check(player.getPosition().cpy().add(-Player.SIZE * 0.5f, Player.SIZE * 0.5f), bullet.getPosition()) ||
+                                    lineOfSight.check(player.getPosition().cpy().add(Player.SIZE * 0.5f, -Player.SIZE * 0.5f), bullet.getPosition()) ||
+                                    lineOfSight.check(player.getPosition().cpy().add(-Player.SIZE * 0.5f, -Player.SIZE * 0.5f), bullet.getPosition()))) {
+                        state = State.DODGING;
+                        send(CHANGE_NAME, randomDodgeName[random.nextInt(randomDodgeName.length)]);
+                        break;
+                    }
                 }
             }
         }
@@ -155,7 +166,7 @@ public class AI extends AISuperClass {
                             Vector2 targetDirection = bulletToPlayer.cpy().nor();
                             Vector2 bulletDirection = new Vector2(MathUtils.cosDeg(bullet.getAngle()), MathUtils.sinDeg(bullet.getAngle()));
                             float dot = targetDirection.dot(bulletDirection);
-                            if (dot > MathUtils.cosDeg(Math.max((1.0f - (bulletToPlayer.len() / 500.0f)) * 180.0f, 20.0f)) &&
+                            if (dot > MathUtils.cosDeg(Math.max((1.0f - (bulletToPlayer.len() / 500.0f)) * 90.0f, 20.0f)) &&
                                     (lineOfSight.check(player.getPosition().cpy().add(Player.SIZE * 0.5f, Player.SIZE * 0.5f), bullet.getPosition()) ||
                                     lineOfSight.check(player.getPosition().cpy().add(-Player.SIZE * 0.5f, Player.SIZE * 0.5f), bullet.getPosition()) ||
                                     lineOfSight.check(player.getPosition().cpy().add(Player.SIZE * 0.5f, -Player.SIZE * 0.5f), bullet.getPosition()) ||
@@ -253,6 +264,7 @@ public class AI extends AISuperClass {
                     // pathIndex indicates the node our tank will approach in the path list
                     pathIndex = 0;
                     updatePathTimer = 0;
+                    send(CHANGE_NAME, "Searching for "+targetPlayer.getName());
                 }
 
                 if(lineOfSight.check(player.getPosition(), targetPlayer.getPosition())) {
@@ -327,10 +339,12 @@ public class AI extends AISuperClass {
                 } else {
                     state = State.PATH_FINDING;
                 }
+                send(CHANGE_NAME, "Steady...");
             }
             break;
 
             case CHASING: {
+                send(CHANGE_NAME, "Chasing down "+targetPlayer.getName());
                 // Make sure there is still line of sight
                 if(targetPlayer.isAlive() && lineOfSight.check(player.getPosition(), targetPlayer.getPosition())) {
                     // Get point to shoot at
@@ -399,5 +413,6 @@ public class AI extends AISuperClass {
     @Override
     public void matchEnded() {
         // Called when the match has ended
+        send(CHANGE_NAME, "GG");
     }
 }
