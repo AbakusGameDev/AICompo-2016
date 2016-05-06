@@ -19,7 +19,6 @@ public class AI extends AISuperClass {
     AStar pathFinder;
     LineOfSight lineOfSight;
     private Vector2 target;
-    private long prevTargetTime;
     private boolean findNewPath;
     private Vector2 targetLastPos;
     private long dangerTime;
@@ -35,8 +34,6 @@ public class AI extends AISuperClass {
         lineOfSight = new LineOfSight();
         path = new ArrayList<Node>();
         progress = 0;
-        
-        prevTargetTime = 0;
         findNewPath = true;
         dangerTime = System.currentTimeMillis();
     }
@@ -135,14 +132,15 @@ public class AI extends AISuperClass {
     		}
     		// Calculate cross product
             playerToTarget = (new Vector2(target).sub(player.getPosition())).nor();
-            float cross = playerToTarget.crs(playerDirection);
-
+            
+            //float cross = playerToTarget.crs(playerDirection);
             // Rotate towards it
-            if (cross < 0.0f) {
+            /*if (cross < 0.0f) {
                 send(TURN_RIGHT);
             } else if (cross > 0.0f) {
                 send(TURN_LEFT);
-            }
+            }*/
+            send(TURN_TOWARDS, playerToTarget.angle());
 
             // Move forwards and shoot
             //send(SHOOT);
