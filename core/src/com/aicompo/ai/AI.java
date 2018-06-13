@@ -88,7 +88,7 @@ public class AI extends AISuperClass {
 
         playerMetaDataMap = new HashMap<>();
         for(Player player : otherPlayers) {
-            playerMetaDataMap.put(player, new LinkedList<>());
+            playerMetaDataMap.put(player, new LinkedList<PlayerMetaData>());
         }
     }
 
